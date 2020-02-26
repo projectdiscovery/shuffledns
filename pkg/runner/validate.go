@@ -23,6 +23,11 @@ func (options *Options) validateOptions() error {
 		return errors.New("no resolver list provided")
 	}
 
+	// Check for either wordlist or stdin or subdomain list
+	if options.Stdin && options.SubdomainsList == "" && options.Wordlist == "" {
+		return errors.New("no wordlist or subdomains given as input")
+	}
+
 	// Check for only bruteforce or resolving
 	if options.SubdomainsList != "" && options.Wordlist != "" {
 		return errors.New("both bruteforce and resolving options specified")
