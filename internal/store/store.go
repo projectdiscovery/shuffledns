@@ -2,7 +2,7 @@ package store
 
 // Store is a storage for ip based wildcard removal
 type Store struct {
-	ips map[string]IPMeta
+	IP map[string]*IPMeta
 }
 
 // IPMeta contains meta-information about a single
@@ -20,22 +20,29 @@ type IPMeta struct {
 // New creates a new storage for ip based wildcard removal
 func New() *Store {
 	return &Store{
-		ips: make(map[string]IPMeta),
+		IP: make(map[string]*IPMeta),
 	}
 }
 
 // New creates a new ip-hostname pair in the map
 func (s *Store) New(ip, hostname string) {
-	s.ips[ip] = IPMeta{Hostnames: []string{hostname}, Counter: 1, Validated: false}
+	s.IP[ip] = &IPMeta{Hostnames: []string{hostname}, Counter: 1, Validated: false}
 }
 
 // Exists indicates if an IP exists in the map
 func (s *Store) Exists(ip string) bool {
-	_, ok := s.ips[ip]
+	_, ok := s.IP[ip]
 	return ok
 }
 
 // Get gets the meta-information for an IP address from the map.
 func (s *Store) Get(ip string) *IPMeta {
-	return &s.ips[ip]
+	return s.IP[ip]
+}
+
+// Close removes all the references to arrays and releases memory to the gc
+func (s *Store) Close() {
+	for ip := range s.IP {
+		s.IP[ip].Hostnames = nil
+	}
 }

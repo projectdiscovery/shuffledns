@@ -8,26 +8,24 @@ import (
 
 // validateOptions validates the configuration options passed
 func (options *Options) validateOptions() error {
-	// Check if Host, list of domains, or stdin info was provided.
-	// If none was provided, then return.
-	if options.Domain == "" && options.HostsFile == "" && !options.Stdin {
-		return errors.New("no input list provided")
+	// If domain was not provided and stdin was not provided, error out
+	if options.Domain == "" && !options.Stdin && options.Wordlist == "" {
+		return errors.New("no domain was provided")
+	}
+
+	// Check if a list of resolvers was provided
+	if options.ResolversFile == "" {
+		return errors.New("no resolver list provided")
+	}
+
+	// Check for only bruteforce or resolving
+	if options.SubdomainsList != "" && options.Wordlist != "" {
+		return errors.New("both bruteforce and resolving options specified")
 	}
 
 	// Both verbose and silent flags were used
 	if options.Verbose && options.Silent {
 		return errors.New("both verbose and silent mode specified")
-	}
-
-	// Validate threads and options
-	if options.Threads == 0 {
-		return errors.New("threads cannot be zero")
-	}
-	if options.Timeout == 0 {
-		return errors.New("timeout cannot be zero")
-	}
-	if options.Rate == 0 {
-		return errors.New("rate cannot be zero")
 	}
 	return nil
 }
