@@ -1,10 +1,10 @@
-# shuffledns
+# shuffleDNS
 
 [![License](https://img.shields.io/badge/license-MIT-_red.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/projectdiscovery/shuffledns)](https://goreportcard.com/report/github.com/projectdiscovery/shuffledns)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/projectdiscovery/shuffledns/issues)
 
-shuffledns is wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains in a fast and reliable manner. It provides a thin wrapper on top of massdns handling wildcard subdomains, easier input outputs, etc.
+shuffleDNS is wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains in a fast and reliable manner. It provides a thin wrapper on top of massdns handling wildcard subdomains, easier input outputs, etc.
 
 Based on the work on `massdns` project by [@blechschmidt](https://github.com/blechschmidt).
 
@@ -60,7 +60,7 @@ shuffledns requires massdns to be installed in order to perform its operations. 
 
 If you place the binary in `/usr/bin/massdns` or `/usr/local/bin/massdns`, the tool will auto-detect the presence of the binary and use it. On windows, you need to supply the path to the binary for the tool to work.
 
-The tool also needs a list of valid resolvers. The [dnsvalidator](https://github.com/vortexau/dnsvalidator) can be used to generate these lists. Either you can use a custom wordlist or use the commonspeak2 wordlists at [https://github.com/assetnote/commonspeak2-wordlists/tree/master/subdomains](https://github.com/assetnote/commonspeak2-wordlists/tree/master/subdomains).
+The tool also needs a list of valid resolvers. The [dnsvalidator](https://github.com/vortexau/dnsvalidator) project can be used to generate these lists. Either you can use a custom wordlist or use the commonspeak2 wordlists at [commonspeak2-wordlist](https://github.com/assetnote/commonspeak2-wordlists/tree/master/subdomains).
 
 ## Direct Installation
 
@@ -148,8 +148,8 @@ http://info.hackerone.com
 
 ### A note on wildcards
 
-A special feature of shuffledns is its ability to handle multi-level DNS based wildcards and do it so with very less number of DNS requests. Sometimes all the subdomains will resolve which will lead to lots of garbage in the results. The way subfinder handles this is it will keep track of how many subdomains point to an IP and if the count of the Subdomains increase beyond a certain small threshold, it will check for wildcard on all the levels of the hosts for that IP iteratively. 
+A special feature of shuffleDNS is its ability to handle multi-level DNS based wildcards and do it so with very less number of DNS requests. Sometimes all the subdomains will resolve which will lead to lots of garbage in the results. The way subfinder handles this is it will keep track of how many subdomains point to an IP and if the count of the Subdomains increase beyond a certain small threshold, it will check for wildcard on all the levels of the hosts for that IP iteratively. 
 
 # License
 
-shuffledns is made with 🖤 by the [projectdiscovery](https://projectdiscovery.io) team. Community contributions have made the project what it is. See the **[Thanks.md](https://github.com/projectdiscovery/shuffledns/blob/master/THANKS.md)** file for more details.
+shuffleDNS is made with 🖤 by the [projectdiscovery](https://projectdiscovery.io) team. Community contributions have made the project what it is. See the **[Thanks.md](https://github.com/projectdiscovery/shuffledns/blob/master/THANKS.md)** file for more details.
