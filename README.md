@@ -7,7 +7,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/projectdiscovery/shuffledns)](https://goreportcard.com/report/github.com/projectdiscovery/shuffledns)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/projectdiscovery/shuffledns/issues)
 
-shuffleDNS is wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains in a fast and reliable manner. It provides a thin wrapper on top of massdns handling wildcard subdomains, easier input outputs, etc.
+shuffleDNS is a wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains with wildcard handling and easy input-output support.
 
 Based on the work on `massdns` project by [@blechschmidt](https://github.com/blechschmidt).
 
