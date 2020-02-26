@@ -5,6 +5,7 @@ import (
 	"flag"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/projectdiscovery/gologger"
 )
@@ -73,7 +74,7 @@ func ParseOptions() *Options {
 	if options.Stdin && options.Wordlist != "" {
 		buffer := &bytes.Buffer{}
 		io.Copy(buffer, os.Stdin)
-		options.Domain = buffer.String()
+		options.Domain = strings.TrimRight(buffer.String(), "\r\n")
 	}
 
 	return options
