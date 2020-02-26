@@ -3,10 +3,11 @@ package runner
 import "github.com/projectdiscovery/gologger"
 
 const banner = `
-                  __       
-  ___  ___  ___ _/ /  __ __
- / _ \/ _ \/ _ \/ _ \/ // /
-/_//_/\_,_/\_,_/_.__/\_,_/ v1				 
+       __        ________        __       
+  ___ / /  __ __/ _/ _/ /__  ___/ /__ ___
+ (_-</ _ \/ // / _/ _/ / -_)/ _  / _ \(_-<
+/___/_//_/\_,_/_//_//_/\__/ \_,_/_//_/___/ v1
+													
 `
 
 // Version is the current version of naabu
