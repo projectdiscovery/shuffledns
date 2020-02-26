@@ -40,7 +40,6 @@ This will display help for the tool. Here are all the switches it supports.
 |------------|------------------------------------------------------------|--------------------------------------|
 | -d         | Domain to find or resolve subdomains for                   | shuffledns -d hackerone.com          |
 | -directory | Temporary directory for enumeration                        | shuffledns -directory /hdd           |
-| -w         | Wordlist containing list of words to bruteforce subdomains | shuffledns -w list.txt               |
 | -r         | File containing resolvers for enumeration                  | shuffledns -r resolvers.txt          |
 | -nC        | Don't Use colors in output                                 | shuffledns -nC                       |
 | -o         | File to save output result (optional)                      | shuffledns -o hackerone.txt          |
@@ -132,9 +131,18 @@ The subdomains discovered can be piped to other tools too. For example, you can 
 ```bash
 > echo hackerone.com | shuffledns -w wordlist.txt -r resolvers.txt -silent | httprobe
 
-http://mail.hackerone.com
 http://docs.hackerone.com
-http://app.hackerone.com
+http://www.hackerone.com
+http://info.hackerone.com
+```
+
+or
+
+```bash
+> echo hackerone.com | subfinder | shuffledns -w wordlist.txt -r resolvers.txt -silent | httprobe
+
+http://docs.hackerone.com
+http://www.hackerone.com
 http://info.hackerone.com
 ```
 
