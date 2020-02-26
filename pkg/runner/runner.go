@@ -124,7 +124,7 @@ func (r *Runner) processDomain() {
 		if text == "" {
 			continue
 		}
-		writer.WriteString(text + "." + r.options.Domain)
+		writer.WriteString(text + "." + r.options.Domain + "\n")
 	}
 	writer.Flush()
 	inputFile.Close()

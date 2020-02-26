@@ -10,5 +10,8 @@ func IsBlankFile(file string) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	return stat.Size() <= 1, nil
+	if stat.Size() <= 1 {
+		return true, nil
+	}
+	return false, nil
 }
