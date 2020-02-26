@@ -1,7 +1,9 @@
 package runner
 
 import (
+	"bytes"
 	"flag"
+	"io"
 	"os"
 
 	"github.com/projectdiscovery/gologger"
@@ -10,6 +12,7 @@ import (
 // Options contains the configuration options for tuning
 // the active dns resolving process.
 type Options struct {
+	Directory      string // Directory is a directory for temporary data
 	Domain         string // Domain is the domain to find subdomains
 	SubdomainsList string // SubdomainsList is the file containing list of hosts to resolve
 	ResolversFile  string // ResolversFile is the file containing resolvers to use for enumeration
@@ -24,13 +27,13 @@ type Options struct {
 	Threads        int    // Thread controls the number of parallel host to enumerate
 
 	Stdin bool // Stdin specifies whether stdin input was given to the process
-
 }
 
 // ParseOptions parses the command line flags provided by a user
 func ParseOptions() *Options {
 	options := &Options{}
 
+	flag.StringVar(&options.Directory, "directory", "", "Temporary directory for enumeration")
 	flag.StringVar(&options.Domain, "d", "", "Domain to find or resolve subdomains for")
 	flag.StringVar(&options.SubdomainsList, "list", "", "File containing list of subdomains to resolve")
 	flag.StringVar(&options.ResolversFile, "r", "", "File containing list of resolvers for enumeration")
@@ -64,6 +67,13 @@ func ParseOptions() *Options {
 	err := options.validateOptions()
 	if err != nil {
 		gologger.Fatalf("Program exiting: %s\n", err)
+	}
+
+	// Set the domain in the config if provided by user from the stdin
+	if options.Stdin && options.Wordlist != "" {
+		buffer := bytes.Buffer{}
+		io.Copy(buffer, os.Stdin)
+		options.Domain = buffer.String()
 	}
 
 	return options
