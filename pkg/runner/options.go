@@ -43,7 +43,7 @@ func ParseOptions() *Options {
 	flag.StringVar(&options.Output, "o", "", "File to write output to (optional)")
 	flag.BoolVar(&options.Silent, "silent", false, "Show only subdomains in output")
 	flag.BoolVar(&options.Version, "version", false, "Show version of shuffledns")
-	flag.IntVar(&options.Retries, "retries", 1, "Number of retries for the port scan probe")
+	flag.IntVar(&options.Retries, "retries", 5, "Number of retries for dns enumeration")
 	flag.BoolVar(&options.Verbose, "v", false, "Show Verbose output")
 	flag.BoolVar(&options.NoColor, "nC", false, "Don't Use colors in output")
 	flag.IntVar(&options.Threads, "t", 10000, "Number of concurrent massdns resolves")
