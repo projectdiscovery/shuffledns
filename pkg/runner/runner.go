@@ -7,8 +7,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"time"
 
 	"github.com/projectdiscovery/gologger"
+	"github.com/projectdiscovery/shuffledns/pkg/massdns"
 	"github.com/rs/xid"
 )
 
@@ -31,6 +33,7 @@ func New(options *Options) (*Runner, error) {
 		if options.MassdnsPath == "" {
 			return nil, errors.New("could not find massdns binary")
 		}
+		gologger.Debugf("Discovered massdns binary at %s\n", options.MassdnsPath)
 	}
 
 	// Create a temporary directory that will be removed at the end
@@ -65,36 +68,40 @@ func (r *Runner) findBinary() string {
 	return ""
 }
 
-// runEnumeration sets up the input layer for giving input to massdns
+// RunEnumeration sets up the input layer for giving input to massdns
 // binary and runs the actual enumeration
-func (r *Runner) runEnumeration() error {
+func (r *Runner) RunEnumeration() {
 	// Handle stdin input
 	if r.options.Stdin {
 		// Is the stdin input a domain for bruteforce
-		if r.options.Wordlist {
+		if r.options.Wordlist != "" {
 			r.processDomain()
+			return
 		}
 		// Write the input from stdin to a file and resolve it.
 		r.processSubdomains()
+		return
 	}
 
 	// Handle a list of subdomains to resolve
-	if r.options.SubdomainsList {
+	if r.options.SubdomainsList != "" {
 		r.processSubdomains()
+		return
 	}
 
 	// Handle a domain to bruteforce with wordlist
-	if r.options.Wordlist {
+	if r.options.Wordlist != "" {
 		r.processDomain()
+		return
 	}
 }
 
 // processDomain processes the bruteforce for a domain using a wordlist
 func (r *Runner) processDomain() {
 	resolveFile := path.Join(r.tempDir, xid.New().String())
-	file, err := os.Create(resolverFile)
+	file, err := os.Create(resolveFile)
 	if err != nil {
-		gologger.Fatalf("Could not create bruteforce list (%s): %s\n", r.tempDir, err)
+		gologger.Errorf("Could not create bruteforce list (%s): %s\n", r.tempDir, err)
 		return
 	}
 	writer := bufio.NewWriter(file)
@@ -102,11 +109,14 @@ func (r *Runner) processDomain() {
 	// Read the input wordlist for bruteforce generation
 	inputFile, err := os.Open(r.options.Wordlist)
 	if err != nil {
-		gologger.Fatalf("Could not read bruteforce wordlist (%s): %s\n", r.options.Wordlist, err)
+		gologger.Errorf("Could not read bruteforce wordlist (%s): %s\n", r.options.Wordlist, err)
 		file.Close()
 		return
 	}
 
+	gologger.Infof("Started generating bruteforce permutation\n")
+
+	now := time.Now()
 	// Create permutation for domain with wordlist
 	scanner := bufio.NewScanner(inputFile)
 	for scanner.Scan() {
@@ -120,6 +130,10 @@ func (r *Runner) processDomain() {
 	inputFile.Close()
 	file.Close()
 
+	gologger.Infof("Generating permutations took %s\n", time.Now().Sub(now))
+
+	// Run the actual massdns enumeration process
+	r.runMassdns(resolveFile)
 }
 
 // processSubdomain processes the resolving for a list of subdomains
@@ -129,9 +143,9 @@ func (r *Runner) processSubdomains() {
 	// If there is stdin, write the resolution list to the file
 	if r.options.Stdin {
 		resolveFile = path.Join(r.tempDir, xid.New().String())
-		file, err := os.Create(resolverFile)
+		file, err := os.Create(resolveFile)
 		if err != nil {
-			gologger.Fatalf("Could not create resolution list (%s): %s\n", tempDir, err)
+			gologger.Errorf("Could not create resolution list (%s): %s\n", r.tempDir, err)
 			return
 		}
 		io.Copy(file, os.Stdin)
@@ -140,4 +154,31 @@ func (r *Runner) processSubdomains() {
 		// Use the file if user has provided one
 		resolveFile = r.options.SubdomainsList
 	}
+
+	// Run the actual massdns enumeration process
+	r.runMassdns(resolveFile)
+}
+
+// runMassdns runs the massdns tool on the list of inputs
+func (r *Runner) runMassdns(inputFile string) {
+	massdns, err := massdns.New(massdns.Config{
+		Domain:        r.options.Domain,
+		Retries:       r.options.Retries,
+		MassdnsPath:   r.options.MassdnsPath,
+		Threads:       r.options.Threads,
+		InputFile:     inputFile,
+		ResolversFile: r.options.ResolversFile,
+		TempDir:       r.tempDir,
+		OutputFile:    r.options.Output,
+	})
+	if err != nil {
+		gologger.Errorf("Could not create massdns client: %s\n", err)
+		return
+	}
+
+	err = massdns.Process()
+	if err != nil {
+		gologger.Errorf("Could not run massdns: %s\n", err)
+	}
+	gologger.Infof("Finished resolving. Hack the Planet!\n")
 }

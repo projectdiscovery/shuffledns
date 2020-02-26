@@ -71,7 +71,7 @@ func ParseOptions() *Options {
 
 	// Set the domain in the config if provided by user from the stdin
 	if options.Stdin && options.Wordlist != "" {
-		buffer := bytes.Buffer{}
+		buffer := &bytes.Buffer{}
 		io.Copy(buffer, os.Stdin)
 		options.Domain = buffer.String()
 	}
