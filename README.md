@@ -1,5 +1,5 @@
 <h1 align="left">
-  <img src="static/shuffledns-logo.png" alt="shuffledns" width="170px"></a>
+  <img src="static/shuffledns-logo.png" alt="shuffledns" width="200px"></a>
   <br>
 </h1>
 
