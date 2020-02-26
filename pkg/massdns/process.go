@@ -125,22 +125,24 @@ func (c *Client) writeOutput(store *store.Store) error {
 	buffer := &strings.Builder{}
 
 	uniqueMap := make(map[string]struct{})
+
 	for _, record := range store.IP {
 		for _, hostname := range record.Hostnames {
+			// Skip if we already printed this subdomain once
+			if _, ok := uniqueMap[hostname]; ok {
+				continue
+			}
+			uniqueMap[hostname] = struct{}{}
+
 			buffer.WriteString(hostname)
 			buffer.WriteString("\n")
 			data := buffer.String()
 
-			// Check if we don't have a duplicate
-			if _, ok := uniqueMap[data]; !ok {
-				uniqueMap[data] = struct{}{}
-
-				if output != nil {
-					w.WriteString(data)
-				}
-				gologger.Silentf("%s", data)
-				buffer.Reset()
+			if output != nil {
+				w.WriteString(data)
 			}
+			gologger.Silentf("%s", data)
+			buffer.Reset()
 		}
 	}
 
