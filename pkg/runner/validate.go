@@ -10,7 +10,12 @@ import (
 func (options *Options) validateOptions() error {
 	// If domain was not provided and stdin was not provided, error out
 	if options.Domain == "" && !options.Stdin && options.Wordlist == "" {
-		return errors.New("no domain was provided")
+		return errors.New("no domain was provided for bruteforce")
+	}
+
+	// Check if stdin was given and no
+	if options.Wordlist == "" && (options.Stdin || options.SubdomainsList != "") && options.Domain == "" {
+		return errors.New("no domain was provided for resolving subdomains")
 	}
 
 	// Check if a list of resolvers was provided
