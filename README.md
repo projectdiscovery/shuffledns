@@ -52,7 +52,7 @@ This will display help for the tool. Here are all the switches it supports.
 | -silent    | Show only subdomains in output                             | shuffledns -silent                   |
 | -t         | Number of concurrent massdns resolves (default 10000)      | shuffledns -t 100                    |
 | -v         | Show Verbose output                                        | shuffeldns -v                        |
-| -version   | Show version of shuffledns                                 | shuffledns -version                  |
+| -version   | Show version of shuffledns                                 | shuffeldns -version                  |
 | -w         | File containing words to bruteforce for domain             | shuffledns -w words.txt              |
 
 # Installation Instructions
