@@ -40,6 +40,11 @@ func (s *Store) Get(ip string) *IPMeta {
 	return s.IP[ip]
 }
 
+// Delete deletes the records for an IP from store.
+func (s *Store) Delete(ip string) {
+	delete(s.IP, ip)
+}
+
 // Close removes all the references to arrays and releases memory to the gc
 func (s *Store) Close() {
 	for ip := range s.IP {

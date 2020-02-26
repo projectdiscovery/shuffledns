@@ -24,6 +24,16 @@ type Config struct {
 	Retries int
 	// MassdnsPath is the path to the binary
 	MassdnsPath string
+	// Threads is the hashmap size for massdns
+	Threads int
+	// InputFile is the file to use for massdns input
+	InputFile string
+	// ResolversFile is the file with the resolvers
+	ResolversFile string
+	// TempDir is a temporary directory for storing massdns misc files
+	TempDir string
+	// OutputFile is the file to use for massdns output
+	OutputFile string
 }
 
 // excellentResolvers contains some resolvers used in dns verification step
