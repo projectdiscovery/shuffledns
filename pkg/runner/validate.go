@@ -24,7 +24,7 @@ func (options *Options) validateOptions() error {
 	}
 
 	// Check for either wordlist or stdin or subdomain list
-	if options.Stdin && options.SubdomainsList == "" && options.Wordlist == "" {
+	if !options.Stdin && options.SubdomainsList == "" && options.Wordlist == "" {
 		return errors.New("no wordlist or subdomains given as input")
 	}
 
