@@ -3,7 +3,7 @@ package massdns
 import (
 	"sync"
 
-	"github.com/projectdiscovery/kepler/pkg/wildcards"
+	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
 )
 
 // Client is a client for running massdns on a target

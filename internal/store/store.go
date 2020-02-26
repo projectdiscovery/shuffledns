@@ -37,5 +37,5 @@ func (s *Store) Exists(ip string) bool {
 
 // Get gets the meta-information for an IP address from the map.
 func (s *Store) Get(ip string) *IPMeta {
-	return s.ips[ip]
+	return &s.ips[ip]
 }
