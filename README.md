@@ -1,4 +1,7 @@
-# shuffleDNS
+<h1 align="left">
+  <img src="static/shuffledns-logo.png" alt="shuffledns" width="170px"></a>
+  <br>
+</h1>
 
 [![License](https://img.shields.io/badge/license-MIT-_red.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/projectdiscovery/shuffledns)](https://goreportcard.com/report/github.com/projectdiscovery/shuffledns)
