@@ -79,8 +79,10 @@ The installation is easy. You can download the pre-built binaries for your platf
 shuffledns requires go1.13+ to install successfully. Run the following command to get the repo - 
 
 ```bash
-> GO111MODULE=on go get -v github.com/projectdiscovery/shuffledns/cmd/shuffledns
+> GO111MODULE=on go get -u -v github.com/projectdiscovery/shuffledns/cmd/shuffledns
 ```
+
+In order to update the tool, you can use -u flag with `go get` command.
 
 # Running shuffledns
 
