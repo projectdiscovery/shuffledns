@@ -1,10 +1,13 @@
-# shuffleDNS
+<h1 align="left">
+  <img src="static/shuffledns-logo.png" alt="shuffledns" width="200px"></a>
+  <br>
+</h1>
 
 [![License](https://img.shields.io/badge/license-MIT-_red.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/projectdiscovery/shuffledns)](https://goreportcard.com/report/github.com/projectdiscovery/shuffledns)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/projectdiscovery/shuffledns/issues)
 
-shuffleDNS is wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains in a fast and reliable manner. It provides a thin wrapper on top of massdns handling wildcard subdomains, easier input outputs, etc.
+shuffleDNS is a wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains with wildcard handling and easy input-output support.
 
 Based on the work on `massdns` project by [@blechschmidt](https://github.com/blechschmidt).
 
@@ -48,7 +51,7 @@ This will display help for the tool. Here are all the switches it supports.
 | -retries   | Number of retries for dns enumeration (default 5)          | shuffledns -retries 1                |
 | -silent    | Show only subdomains in output                             | shuffledns -silent                   |
 | -t         | Number of concurrent massdns resolves (default 10000)      | shuffledns -t 100                    |
-| -v         | Show Verbose output                                        | shuffeldns -v                        |
+| -v         | Show Verbose output                                        | shuffledns -v                        |
 | -version   | Show version of shuffledns                                 | shuffledns -version                  |
 | -w         | File containing words to bruteforce for domain             | shuffledns -w words.txt              |
 
@@ -150,7 +153,7 @@ http://info.hackerone.com
 
 ### A note on wildcards
 
-A special feature of shuffleDNS is its ability to handle multi-level DNS based wildcards and do it so with very less number of DNS requests. Sometimes all the subdomains will resolve which will lead to lots of garbage in the results. The way subfinder handles this is it will keep track of how many subdomains point to an IP and if the count of the Subdomains increase beyond a certain small threshold, it will check for wildcard on all the levels of the hosts for that IP iteratively. 
+A special feature of shuffleDNS is its ability to handle multi-level DNS based wildcards and do it so with very less number of DNS requests. Sometimes all the subdomains will resolve which will lead to lots of garbage in the results. The way shuffleDNS handles this is it will keep track of how many subdomains point to an IP and if the count of the Subdomains increase beyond a certain small threshold, it will check for wildcard on all the levels of the hosts for that IP iteratively. 
 
 # License
 
