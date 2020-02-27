@@ -144,7 +144,7 @@ http://info.hackerone.com
 or
 
 ```bash
-> echo hackerone.com | subfinder | shuffledns -w wordlist.txt -r resolvers.txt -silent | httprobe
+> echo hackerone.com | subfinder | shuffledns -d hackerone.com -r resolvers.txt -silent | httprobe
 
 http://docs.hackerone.com
 http://www.hackerone.com
