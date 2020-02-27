@@ -1,1 +1,2 @@
-cmd/shuffledns/shuffledns
+cmd/shuffledns/shuffledns*
+cmd/shuffledns/build.sh
