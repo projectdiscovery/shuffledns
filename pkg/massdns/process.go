@@ -94,15 +94,17 @@ func (c *Client) Process() error {
 					continue
 				}
 
-				// // If the same ip has been found more than 5 times, perform wildcard detection
-				// // on it now, if an IP is found in the wildcard we add it to the wildcard map
-				// // so that further runs don't require such filtering again.
+				// If the same ip has been found more than 5 times, perform wildcard detection
+				// on it now, if an IP is found in the wildcard we add it to the wildcard map
+				// so that further runs don't require such filtering again.
 				if ipm.Counter >= 5 && !ipm.Validated {
 					for host := range ipm.Hostnames {
 						wildcard, ips := c.wildcardResolver.LookupHost(host)
 						if wildcard {
 							for ip := range ips {
+								c.wildcardIPMutex.Lock()
 								c.wildcardIPMap[ip] = struct{}{}
+								c.wildcardIPMutex.Unlock()
 							}
 
 							continue

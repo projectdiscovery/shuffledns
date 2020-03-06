@@ -12,12 +12,19 @@ shuffleDNS is a wrapper around massdns written in go that allows you to enumerat
 Based on the work on `massdns` project by [@blechschmidt](https://github.com/blechschmidt).
 
 # Resources
+- [Resources](#resources)
 - [Features](#features)
 - [Usage](#usage)
-- [Installation Instuctions (direct)](#direct-installation)
+- [Installation Instructions](#installation-instructions)
+  - [Prerequisite](#prerequisite)
+  - [Direct Installation](#direct-installation)
     - [From Binary](#from-binary)
     - [From Source](#from-source)
 - [Running shuffledns](#running-shuffledns)
+    - [1. Resolving Subdomains](#1-resolving-subdomains)
+    - [2. Bruteforcing Subdomains](#2-bruteforcing-subdomains)
+    - [A note on wildcards](#a-note-on-wildcards)
+- [License](#license)
 
  # Features
 
@@ -54,6 +61,7 @@ This will display help for the tool. Here are all the switches it supports.
 | -v         | Show Verbose output                                        | shuffledns -v                        |
 | -version   | Show version of shuffledns                                 | shuffledns -version                  |
 | -w         | File containing words to bruteforce for domain             | shuffledns -w words.txt              |
+| -wt        | Number of concurrent wildcard checks (default 25)          | shuffledns -wg 100                   |
 
 # Installation Instructions
 
