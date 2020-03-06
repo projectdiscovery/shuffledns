@@ -34,6 +34,8 @@ type Config struct {
 	TempDir string
 	// OutputFile is the file to use for massdns output
 	OutputFile string
+	// WildcardsThreads is the number of wildcards concurrent threads
+	WildcardsThreads int
 }
 
 // excellentResolvers contains some resolvers used in dns verification step

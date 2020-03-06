@@ -9,6 +9,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/projectdiscovery/gologger"
@@ -29,8 +30,8 @@ func (c *Client) Process() error {
 	}
 
 	// Create a store for storing ip metadata
-	store := store.New()
-	defer store.Close()
+	shstore := store.New()
+	defer shstore.Close()
 
 	// Create a temporary file for the massdns output
 	temporaryOutput := path.Join(c.config.TempDir, xid.New().String())
@@ -55,57 +56,85 @@ func (c *Client) Process() error {
 
 	gologger.Infof("Parsing output and removing wildcards\n")
 
+	// at first we need the full structure in memory to elaborate it in parallell
 	err = parser.Parse(massdnsOutput, func(domain string, ip []string) {
 		for _, ip := range ip {
-			// We've stumbled upon a wildcard, just ignore it.
-			if _, ok := c.wildcardIPMap[ip]; ok {
-				break
-			}
-
 			// Check if ip exists in the store. If not,
 			// add the ip to the map and continue with the next ip.
-			if !store.Exists(ip) {
-				store.New(ip, domain)
+			if !shstore.Exists(ip) {
+				shstore.New(ip, domain)
 				continue
 			}
 
 			// Get the IP meta-information from the store.
-			record := store.Get(ip)
+			record := shstore.Get(ip)
 
-			// If the same ip has been found more than 5 times, perform wildcard detection
-			// on it now, if an IP is found in the wildcard, we delete all hostnames associated
-			// with it, also we add it to the wildcard map so that further runs don't require such
-			// filtering again.
-			if record.Counter >= 5 && !record.Validated {
-				for _, host := range record.Hostnames {
-					wildcard, ips := c.wildcardResolver.LookupHost(host)
-					if wildcard {
-						for ip := range ips {
-							store.Delete(ip)
-							c.wildcardIPMap[ip] = struct{}{}
-						}
-
-						// Exit out of the loop if we've found a wildcard and test no more
-						// hosts having the same IP.
-						break
-					}
-					// If not a wildcard, then add the IPs to the exclusion
-					// map and don't perform any further checking for wildcards on them.
-					record.Validated = true
-				}
-			}
 			// Put the new hostname and increment the counter by 1.
-			record.Hostnames = append(record.Hostnames, domain)
+			record.Hostnames[domain] = struct{}{}
 			record.Counter++
 		}
 	})
+
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
 	}
+
+	// start to works in parallel on wildcards
+	var (
+		wildcardWG sync.WaitGroup
+	)
+	workchan := make(chan *store.IPMeta)
+	for i := 0; i < c.config.WildcardsThreads; i++ {
+		wildcardWG.Add(1)
+		go func() {
+			defer wildcardWG.Done()
+			for ipm := range workchan {
+				// We've stumbled upon a wildcard, just ignore it.
+				if _, ok := c.wildcardIPMap[ipm.IP]; ok {
+					continue
+				}
+
+				// // If the same ip has been found more than 5 times, perform wildcard detection
+				// // on it now, if an IP is found in the wildcard we add it to the wildcard map
+				// // so that further runs don't require such filtering again.
+				if ipm.Counter >= 5 && !ipm.Validated {
+					for host := range ipm.Hostnames {
+						wildcard, ips := c.wildcardResolver.LookupHost(host)
+						if wildcard {
+							for ip := range ips {
+								c.wildcardIPMap[ip] = struct{}{}
+							}
+
+							continue
+						}
+						ipm.Validated = true
+					}
+				}
+			}
+		}()
+	}
+
+	// process all the items
+	wildcardWG.Add(1)
+	go func() {
+		defer close(workchan)
+		defer wildcardWG.Done()
+		for _, record := range shstore.IP {
+			workchan <- record
+		}
+	}()
+
+	wildcardWG.Wait()
+
+	// drop all wildcard from the store
+	for wildcardIP := range c.wildcardIPMap {
+		shstore.Delete(wildcardIP)
+	}
+
 	gologger.Infof("Finished enumeration, started writing output\n")
 
 	// Parse the massdns output
-	return c.writeOutput(store)
+	return c.writeOutput(shstore)
 }
 
 func (c *Client) writeOutput(store *store.Store) error {
@@ -127,7 +156,7 @@ func (c *Client) writeOutput(store *store.Store) error {
 	uniqueMap := make(map[string]struct{})
 
 	for _, record := range store.IP {
-		for _, hostname := range record.Hostnames {
+		for hostname := range record.Hostnames {
 			// Skip if we already printed this subdomain once
 			if _, ok := uniqueMap[hostname]; ok {
 				continue
