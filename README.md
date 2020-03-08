@@ -46,22 +46,24 @@ shuffledns -h
 ```
 This will display help for the tool. Here are all the switches it supports.
 
-| Flag       | Description                                                | Example                              |
-|------------|------------------------------------------------------------|--------------------------------------|
-| -d         | Domain to find or resolve subdomains for                   | shuffledns -d hackerone.com          |
-| -directory | Temporary directory for enumeration                        | shuffledns -directory /hdd           |
-| -r         | File containing resolvers for enumeration                  | shuffledns -r resolvers.txt          |
-| -nC        | Don't Use colors in output                                 | shuffledns -nC                       |
-| -o         | File to save output result (optional)                      | shuffledns -o hackerone.txt          |
-| -list      | List of subdomains to process for                          | shuffledns -list bugcrowd.txt        |
-| -massdns   | Massdns binary path                                        | shuffledns -massdns /usr/bin/massdns |
-| -retries   | Number of retries for dns enumeration (default 5)          | shuffledns -retries 1                |
-| -silent    | Show only subdomains in output                             | shuffledns -silent                   |
-| -t         | Number of concurrent massdns resolves (default 10000)      | shuffledns -t 100                    |
-| -v         | Show Verbose output                                        | shuffledns -v                        |
-| -version   | Show version of shuffledns                                 | shuffledns -version                  |
-| -w         | File containing words to bruteforce for domain             | shuffledns -w words.txt              |
-| -wt        | Number of concurrent wildcard checks (default 25)          | shuffledns -wg 100                   |
+| Flag           | Description                                             | Example                              |
+|----------------|---------------------------------------------------------|--------------------------------------|
+| -d             | Domain to find or resolve subdomains for                | shuffledns -d hackerone.com          |
+| -directory     | Temporary directory for enumeration                     | shuffledns -directory /hdd           |
+| -r             | File containing resolvers for enumeration               | shuffledns -r resolvers.txt          |
+| -nC            | Don't Use colors in output                              | shuffledns -nC                       |
+| -o             | File to save output result (optional)                   | shuffledns -o hackerone.txt          |
+| -list          | List of subdomains to process for                       | shuffledns -list bugcrowd.txt        |
+| -massdns       | Massdns binary path                                     | shuffledns -massdns /usr/bin/massdns |
+| -retries       | Number of retries for dns enumeration (default 5)       | shuffledns -retries 1                |
+| -silent        | Show only subdomains in output                          | shuffledns -silent                   |
+| -t             | Number of concurrent massdns resolves (default 10000)   | shuffledns -t 100                    |
+| -v             | Show Verbose output                                     | shuffledns -v                        |
+| -version       | Show version of shuffledns                              | shuffledns -version                  |
+| -w             | File containing words to bruteforce for domain          | shuffledns -w words.txt              |
+| -wt            | Number of concurrent wildcard checks (default 25)       | shuffledns -wg 100                   |
+| -massdns-file  | File containing existing massdns output                 | shuffledns -massdns-file output.txt  |
+| -wildcard-only | Wildcard only filtering                                 | shuffledns -wildcard-only            |
 
 # Installation Instructions
 

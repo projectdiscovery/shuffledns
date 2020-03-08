@@ -13,20 +13,22 @@ import (
 // Options contains the configuration options for tuning
 // the active dns resolving process.
 type Options struct {
-	Directory       string // Directory is a directory for temporary data
-	Domain          string // Domain is the domain to find subdomains
-	SubdomainsList  string // SubdomainsList is the file containing list of hosts to resolve
-	ResolversFile   string // ResolversFile is the file containing resolvers to use for enumeration
-	Wordlist        string // Wordlist is a wordlist to use for enumeration
-	MassdnsPath     string // MassdnsPath contains the path to massdns binary
-	Output          string // Output is the file to write found subdomains to.
-	Silent          bool   // Silent suppresses any extra text and only writes found host:port to screen
-	Version         bool   // Version specifies if we should just show version and exit
-	Retries         int    // Retries is the number of retries for dns enumeration
-	Verbose         bool   // Verbose flag indicates whether to show verbose output or not
-	NoColor         bool   // No-Color disables the colored output
-	Threads         int    // Thread controls the number of parallel host to enumerate
-	WildcardThreads int    // WildcardsThreads controls the number of parallel host to check for wildcard
+	Directory           string // Directory is a directory for temporary data
+	Domain              string // Domain is the domain to find subdomains
+	SubdomainsList      string // SubdomainsList is the file containing list of hosts to resolve
+	ResolversFile       string // ResolversFile is the file containing resolvers to use for enumeration
+	Wordlist            string // Wordlist is a wordlist to use for enumeration
+	MassdnsPath         string // MassdnsPath contains the path to massdns binary
+	Output              string // Output is the file to write found subdomains to.
+	Silent              bool   // Silent suppresses any extra text and only writes found host:port to screen
+	Version             bool   // Version specifies if we should just show version and exit
+	Retries             int    // Retries is the number of retries for dns enumeration
+	Verbose             bool   // Verbose flag indicates whether to show verbose output or not
+	NoColor             bool   // No-Color disables the colored output
+	Threads             int    // Thread controls the number of parallel host to enumerate
+	WildcardOnly        bool   // WildcardOnly perform only wildcards filtering from an existing massdns output file
+	MassdnsExistingFile string // MassdnsExistingFile points to existing massdns output
+	WildcardThreads     int    // WildcardsThreads controls the number of parallel host to check for wildcard
 
 	Stdin bool // Stdin specifies whether stdin input was given to the process
 }
@@ -48,6 +50,8 @@ func ParseOptions() *Options {
 	flag.BoolVar(&options.Verbose, "v", false, "Show Verbose output")
 	flag.BoolVar(&options.NoColor, "nC", false, "Don't Use colors in output")
 	flag.IntVar(&options.Threads, "t", 10000, "Number of concurrent massdns resolves")
+	flag.BoolVar(&options.WildcardOnly, "wildcard-only", false, "Wildcard only filtering")
+	flag.StringVar(&options.MassdnsExistingFile, "massdns-file", "", "File containing existing massdns output")
 	flag.IntVar(&options.WildcardThreads, "wt", 25, "Number of concurrent wildcard checks")
 
 	flag.Parse()
