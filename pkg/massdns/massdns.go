@@ -36,10 +36,8 @@ type Config struct {
 	OutputFile string
 	// WildcardsThreads is the number of wildcards concurrent threads
 	WildcardsThreads int
-	// WildcardOnly perform only wildcards filtering from an existing massdns output file
-	WildcardOnly bool
-	// MassdnsExistingFile points to existing massdns output to parse
-	MassdnsExistingFile string
+	// MassdnsRaw perform wildcards filtering from an existing massdns output file
+	MassdnsRaw string
 }
 
 // excellentResolvers contains some resolvers used in dns verification step

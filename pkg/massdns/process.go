@@ -9,22 +9,24 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/shuffledns/internal/store"
 	"github.com/projectdiscovery/shuffledns/pkg/parser"
+	"github.com/remeh/sizedwaitgroup"
 	"github.com/rs/xid"
 )
 
 // Process runs the actual enumeration process returning a file
 func (c *Client) Process() error {
-	// Check for blank input file or non-existent input file
+	// Process a created list or the massdns input
 	inputFile := c.config.InputFile
-	if c.config.WildcardOnly {
-		inputFile = c.config.MassdnsExistingFile
+	if c.config.MassdnsRaw != "" {
+		inputFile = c.config.MassdnsRaw
 	}
+
+	// Check for blank input file or non-existent input file
 	blank, err := IsBlankFile(inputFile)
 	if err != nil {
 		return err
@@ -39,12 +41,12 @@ func (c *Client) Process() error {
 
 	// Set the correct target file
 	massDNSOutput := path.Join(c.config.TempDir, xid.New().String())
-	if c.config.WildcardOnly {
-		massDNSOutput = c.config.MassdnsExistingFile
+	if c.config.MassdnsRaw != "" {
+		massDNSOutput = c.config.MassdnsRaw
 	}
 
 	// Check if we need to run massdns
-	if !c.config.WildcardOnly {
+	if c.config.MassdnsRaw == "" {
 		// Create a temporary file for the massdns output
 		gologger.Infof("Creating temporary massdns output file: %s\n", massDNSOutput)
 		err = c.runMassDNS(massDNSOutput, shstore)
@@ -118,54 +120,40 @@ func (c *Client) parseMassDNSOutput(output string, store *store.Store) error {
 }
 
 func (c *Client) filterWildcards(st *store.Store) error {
-	// start to works in parallel on wildcards
-	var (
-		wildcardWG sync.WaitGroup
-	)
-	workchan := make(chan *store.IPMeta)
-	for i := 0; i < c.config.WildcardsThreads; i++ {
-		wildcardWG.Add(1)
-		go func() {
-			defer wildcardWG.Done()
-			for ipm := range workchan {
-				// We've stumbled upon a wildcard, just ignore it.
-				if _, ok := c.wildcardIPMap[ipm.IP]; ok {
-					continue
-				}
+	// Start to work in parallel on wildcards
+	wildcardWg := sizedwaitgroup.New(c.config.WildcardsThreads)
 
-				// If the same ip has been found more than 5 times, perform wildcard detection
-				// on it now, if an IP is found in the wildcard we add it to the wildcard map
-				// so that further runs don't require such filtering again.
-				if ipm.Counter >= 5 && !ipm.Validated {
-					for host := range ipm.Hostnames {
-						wildcard, ips := c.wildcardResolver.LookupHost(host)
-						if wildcard {
-							c.wildcardIPMutex.Lock()
-							for ip := range ips {
-								c.wildcardIPMap[ip] = struct{}{}
-							}
-							c.wildcardIPMutex.Unlock()
+	for _, record := range st.IP {
+		wildcardWg.Add()
 
-							continue
+		go func(record *store.IPMeta) {
+			defer wildcardWg.Done()
+
+			// We've stumbled upon a wildcard, just ignore it.
+			if _, ok := c.wildcardIPMap[record.IP]; ok {
+				return
+			}
+
+			// If the same ip has been found more than 5 times, perform wildcard detection
+			// on it now, if an IP is found in the wildcard we add it to the wildcard map
+			// so that further runs don't require such filtering again.
+			if record.Counter >= 5 && !record.Validated {
+				for host := range record.Hostnames {
+					wildcard, ips := c.wildcardResolver.LookupHost(host)
+					if wildcard {
+						c.wildcardIPMutex.Lock()
+						for ip := range ips {
+							c.wildcardIPMap[ip] = struct{}{}
 						}
-						ipm.Validated = true
+						c.wildcardIPMutex.Unlock()
+						continue
 					}
+					record.Validated = true
 				}
 			}
-		}()
+		}(record)
 	}
-
-	// process all the items
-	wildcardWG.Add(1)
-	go func() {
-		defer close(workchan)
-		defer wildcardWG.Done()
-		for _, record := range st.IP {
-			workchan <- record
-		}
-	}()
-
-	wildcardWG.Wait()
+	wildcardWg.Wait()
 
 	// drop all wildcard from the store
 	for wildcardIP := range c.wildcardIPMap {

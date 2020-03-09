@@ -8,11 +8,18 @@ import (
 
 // validateOptions validates the configuration options passed
 func (options *Options) validateOptions() error {
-	// Check if the user just wants to perform wildcard filtering on an existing massdns output file
-	if options.WildcardOnly && options.MassdnsExistingFile == "" {
-		return errors.New("no existing massdns output file was provided for wildcard filtering")
-	} else if options.WildcardOnly {
-		// if only wildcard detection is required we don't need to evaluate any other option
+	// Both verbose and silent flags were used
+	if options.Verbose && options.Silent {
+		return errors.New("both verbose and silent mode specified")
+	}
+
+	// Check if the user just wants to perform wildcard filtering on an
+	// existing massdns output file.
+	if options.MassdnsRaw != "" {
+		if options.Domain == "" {
+			return errors.New("no domain supplied for massdns input")
+		}
+		// Return as no more validation required
 		return nil
 	}
 
@@ -39,11 +46,6 @@ func (options *Options) validateOptions() error {
 	// Check for only bruteforce or resolving
 	if options.SubdomainsList != "" && options.Wordlist != "" {
 		return errors.New("both bruteforce and resolving options specified")
-	}
-
-	// Both verbose and silent flags were used
-	if options.Verbose && options.Silent {
-		return errors.New("both verbose and silent mode specified")
 	}
 
 	return nil
