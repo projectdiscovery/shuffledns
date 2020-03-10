@@ -16,6 +16,23 @@ func (options *Options) validateOptions() error {
 		return errors.New("both verbose and silent mode specified")
 	}
 
+	// Check if a list of resolvers was provided and it exists
+	if options.ResolversFile == "" {
+		return errors.New("no resolver list provided")
+	}
+	if _, err := os.Stat(options.ResolversFile); os.IsNotExist(err) {
+		return errors.New("resolver file doesn't exists")
+	}
+
+	// Check if resolvers are blank
+	if blank, err := massdns.IsBlankFile(options.ResolversFile); err == nil {
+		if blank {
+			return errors.New("blank resolver list specified")
+		}
+	} else {
+		return fmt.Errorf("could not read resolvers: %w", err)
+	}
+
 	// Check if the user just wants to perform wildcard filtering on an
 	// existing massdns output file.
 	if options.MassdnsRaw != "" {
@@ -34,23 +51,6 @@ func (options *Options) validateOptions() error {
 	// Check if stdin was given and no
 	if options.Wordlist == "" && (options.Stdin || options.SubdomainsList != "") && options.Domain == "" {
 		return errors.New("no domain was provided for resolving subdomains")
-	}
-
-	// Check if a list of resolvers was provided and it exists
-	if options.ResolversFile == "" {
-		return errors.New("no resolver list provided")
-	}
-	if _, err := os.Stat(options.ResolversFile); os.IsNotExist(err) {
-		return errors.New("resolver file doesn't exists")
-	}
-
-	// Check if resolvers are blank
-	if blank, err := massdns.IsBlankFile(options.ResolversFile); err == nil {
-		if blank {
-			return errors.New("blank resolver list specified")
-		}
-	} else {
-		return fmt.Errorf("could not read resolvers: %w", err)
 	}
 
 	// Check for either wordlist or stdin or subdomain list

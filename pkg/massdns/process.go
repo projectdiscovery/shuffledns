@@ -78,10 +78,10 @@ func (c *Client) runMassDNS(output string, store *store.Store) error {
 	gologger.Infof("Executing massdns on %s\n", c.config.Domain)
 	now := time.Now()
 	// Run the command on a temp file and wait for the output
-  cmd := exec.Command(c.config.MassdnsPath, []string{"-r", c.config.ResolversFile, "-t", "A", c.config.InputFile, "-w", temporaryOutput, "-s", strconv.Itoa(c.config.Threads)}...)
+	cmd := exec.Command(c.config.MassdnsPath, []string{"-r", c.config.ResolversFile, "-t", "A", c.config.InputFile, "-w", output, "-s", strconv.Itoa(c.config.Threads)}...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("could not execute massdns: %w\ndetailed error: %s", err, stderr.String())
 	}
