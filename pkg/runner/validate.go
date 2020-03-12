@@ -11,14 +11,9 @@ import (
 
 // validateOptions validates the configuration options passed
 func (options *Options) validateOptions() error {
-	// If domain was not provided and stdin was not provided, error out
-	if options.Domain == "" && !options.Stdin && options.Wordlist == "" {
-		return errors.New("no domain was provided for bruteforce")
-	}
-
-	// Check if stdin was given and no
-	if options.Wordlist == "" && (options.Stdin || options.SubdomainsList != "") && options.Domain == "" {
-		return errors.New("no domain was provided for resolving subdomains")
+	// Both verbose and silent flags were used
+	if options.Verbose && options.Silent {
+		return errors.New("both verbose and silent mode specified")
 	}
 
 	// Check if a list of resolvers was provided and it exists
@@ -38,6 +33,26 @@ func (options *Options) validateOptions() error {
 		return fmt.Errorf("could not read resolvers: %w", err)
 	}
 
+	// Check if the user just wants to perform wildcard filtering on an
+	// existing massdns output file.
+	if options.MassdnsRaw != "" {
+		if options.Domain == "" {
+			return errors.New("no domain supplied for massdns input")
+		}
+		// Return as no more validation required
+		return nil
+	}
+
+	// If domain was not provided and stdin was not provided, error out
+	if options.Domain == "" && !options.Stdin && options.Wordlist == "" {
+		return errors.New("no domain was provided for bruteforce")
+	}
+
+	// Check if stdin was given and no
+	if options.Wordlist == "" && (options.Stdin || options.SubdomainsList != "") && options.Domain == "" {
+		return errors.New("no domain was provided for resolving subdomains")
+	}
+
 	// Check for either wordlist or stdin or subdomain list
 	if !options.Stdin && options.SubdomainsList == "" && options.Wordlist == "" {
 		return errors.New("no wordlist or subdomains given as input")
@@ -48,10 +63,6 @@ func (options *Options) validateOptions() error {
 		return errors.New("both bruteforce and resolving options specified")
 	}
 
-	// Both verbose and silent flags were used
-	if options.Verbose && options.Silent {
-		return errors.New("both verbose and silent mode specified")
-	}
 	return nil
 }
 
