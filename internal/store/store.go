@@ -8,8 +8,10 @@ type Store struct {
 // IPMeta contains meta-information about a single
 // IP address found during enumeration.
 type IPMeta struct {
+	// we store also the ip itself as we will need it later for filtering
+	IP string
 	// Hostnames contains the list of hostnames for the IP
-	Hostnames []string
+	Hostnames map[string]struct{}
 	// Counter is the number of times the same ip was found for hosts
 	Counter int
 	// Validated indicates if the host was already checked for wildcards.
@@ -26,7 +28,9 @@ func New() *Store {
 
 // New creates a new ip-hostname pair in the map
 func (s *Store) New(ip, hostname string) {
-	s.IP[ip] = &IPMeta{Hostnames: []string{hostname}, Counter: 1, Validated: false}
+	hostnames := make(map[string]struct{})
+	hostnames[hostname] = struct{}{}
+	s.IP[ip] = &IPMeta{IP: ip, Hostnames: hostnames, Counter: 1, Validated: false}
 }
 
 // Exists indicates if an IP exists in the map
