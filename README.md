@@ -12,19 +12,12 @@ shuffleDNS is a wrapper around massdns written in go that allows you to enumerat
 Based on the work on `massdns` project by [@blechschmidt](https://github.com/blechschmidt).
 
 # Resources
-- [Resources](#resources)
 - [Features](#features)
 - [Usage](#usage)
-- [Installation Instructions](#installation-instructions)
-  - [Prerequisite](#prerequisite)
-  - [Direct Installation](#direct-installation)
+- [Installation Instuctions (direct)](#direct-installation)
     - [From Binary](#from-binary)
     - [From Source](#from-source)
 - [Running shuffledns](#running-shuffledns)
-    - [1. Resolving Subdomains](#1-resolving-subdomains)
-    - [2. Bruteforcing Subdomains](#2-bruteforcing-subdomains)
-    - [A note on wildcards](#a-note-on-wildcards)
-- [License](#license)
 
  # Features
 
@@ -46,23 +39,21 @@ shuffledns -h
 ```
 This will display help for the tool. Here are all the switches it supports.
 
-| Flag           | Description                                             | Example                              |
-|----------------|---------------------------------------------------------|--------------------------------------|
-| -d             | Domain to find or resolve subdomains for                | shuffledns -d hackerone.com          |
-| -directory     | Temporary directory for enumeration                     | shuffledns -directory /hdd           |
-| -r             | File containing resolvers for enumeration               | shuffledns -r resolvers.txt          |
-| -nC            | Don't Use colors in output                              | shuffledns -nC                       |
-| -o             | File to save output result (optional)                   | shuffledns -o hackerone.txt          |
-| -list          | List of subdomains to process for                       | shuffledns -list bugcrowd.txt        |
-| -massdns       | Massdns binary path                                     | shuffledns -massdns /usr/bin/massdns |
-| -retries       | Number of retries for dns enumeration (default 5)       | shuffledns -retries 1                |
-| -silent        | Show only subdomains in output                          | shuffledns -silent                   |
-| -t             | Number of concurrent massdns resolves (default 10000)   | shuffledns -t 100                    |
-| -v             | Show Verbose output                                     | shuffledns -v                        |
-| -version       | Show version of shuffledns                              | shuffledns -version                  |
-| -w             | File containing words to bruteforce for domain          | shuffledns -w words.txt              |
-| -wt            | Number of concurrent wildcard checks (default 25)       | shuffledns -wg 100                   |
-| -raw-input     | File containing existing massdns output                 | shuffledns -massdns-file output.txt  |
+| Flag       | Description                                                | Example                              |
+|------------|------------------------------------------------------------|--------------------------------------|
+| -d         | Domain to find or resolve subdomains for                   | shuffledns -d hackerone.com          |
+| -directory | Temporary directory for enumeration                        | shuffledns -directory /hdd           |
+| -r         | File containing resolvers for enumeration                  | shuffledns -r resolvers.txt          |
+| -nC        | Don't Use colors in output                                 | shuffledns -nC                       |
+| -o         | File to save output result (optional)                      | shuffledns -o hackerone.txt          |
+| -list      | List of subdomains to process for                          | shuffledns -list bugcrowd.txt        |
+| -massdns   | Massdns binary path                                        | shuffledns -massdns /usr/bin/massdns |
+| -retries   | Number of retries for dns enumeration (default 5)          | shuffledns -retries 1                |
+| -silent    | Show only subdomains in output                             | shuffledns -silent                   |
+| -t         | Number of concurrent massdns resolves (default 10000)      | shuffledns -t 100                    |
+| -v         | Show Verbose output                                        | shuffledns -v                        |
+| -version   | Show version of shuffledns                                 | shuffledns -version                  |
+| -w         | File containing words to bruteforce for domain             | shuffledns -w words.txt              |
 
 # Installation Instructions
 

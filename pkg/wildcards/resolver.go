@@ -85,9 +85,8 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 	for _, host := range hosts {
 		// Round-robin over all the dns servers we have.
 		serverIndex := atomic.LoadInt32(&w.serversIndex)
-		if w.serversIndex >= int32(len(w.servers)-1) {
+		if w.serversIndex == int32(len(w.servers)-1) {
 			atomic.StoreInt32(&w.serversIndex, 0)
-			serverIndex = 0
 		}
 		resolver := w.servers[serverIndex]
 		atomic.AddInt32(&w.serversIndex, 1)
