@@ -133,9 +133,12 @@ func (c *Client) filterWildcards(st *store.Store) error {
 			defer wildcardWg.Done()
 
 			// We've stumbled upon a wildcard, just ignore it.
+			c.wildcardIPMutex.Lock()
 			if _, ok := c.wildcardIPMap[record.IP]; ok {
+				c.wildcardIPMutex.Unlock()
 				return
 			}
+			c.wildcardIPMutex.Unlock()
 
 			// If the same ip has been found more than 5 times, perform wildcard detection
 			// on it now, if an IP is found in the wildcard we add it to the wildcard map
