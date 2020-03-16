@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/projectdiscovery/gologger"
@@ -126,7 +127,8 @@ func (r *Runner) processDomain() {
 	// Create permutation for domain with wordlist
 	scanner := bufio.NewScanner(inputFile)
 	for scanner.Scan() {
-		text := scanner.Text()
+		// RFC4343 - case insensitive domain
+		text := strings.ToLower(scanner.Text())
 		if text == "" {
 			continue
 		}
