@@ -20,9 +20,8 @@ type Callback func(domain string, ip []string)
 func Parse(reader io.Reader, callback Callback) error {
 	var (
 		// Some boolean various needed for state management
-		answerStart bool
-		cnameStart  bool
-		nsStart     bool
+		cnameStart bool
+		nsStart    bool
 
 		// Result variables to store the results
 		domain string
@@ -33,40 +32,33 @@ func Parse(reader io.Reader, callback Callback) error {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		text := scanner.Text()
-		if text == "" {
-			continue
-		}
 
-		// Ignore fields with less than 4 characters
-		if len(text) < 4 {
-			continue
-		}
-
+		// Empty line represents a seperator between DNS reply
+		// due to `-o Snl` option set in massdns. Thus it can be
+		// interpreted as a DNS answer header.
+		//
 		// If we have start of a DNS answer header, set the
 		// bool state to default, and return the results to the
 		// consumer via the callback.
-		if text[0] == ';' && text[1] == ';' && text[2] == ' ' && text[3] == 'A' && text[4] == 'N' {
+		if text == "" {
 			if domain != "" {
 				cnameStart, nsStart = false, false
 				callback(domain, ip)
 				domain, ip = "", nil
 			}
-			answerStart = true
 			continue
-		}
-
-		// If we are expecting a DNS answer, we split on space,
-		// iterate over all the parts, and write the answer to the struct.
-		if answerStart {
+		} else {
+			// Non empty line represents DNS answer section, we split on space,
+			// iterate over all the parts, and write the answer to the struct.
 			parts := strings.Split(text, " ")
 
-			if len(parts) != 5 {
+			if len(parts) != 3 {
 				continue
 			}
 
 			// Switch on the record type, deciding what to do with
 			// a record based on the type of record.
-			switch parts[3] {
+			switch parts[1] {
 			case "NS":
 				// If we have a NS record, then set nsStart
 				// which will ignore all the next records
@@ -92,7 +84,7 @@ func Parse(reader io.Reader, callback Callback) error {
 					if !cnameStart && domain == "" {
 						domain = strings.TrimSuffix(parts[0], ".")
 					}
-					ip = append(ip, parts[4])
+					ip = append(ip, parts[2])
 				}
 			}
 		}
