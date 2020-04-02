@@ -8,18 +8,7 @@ import (
 )
 
 func TestParserParseSingleIP(t *testing.T) {
-	sampleData := `
-;; Server: 9.9.9.10:53
-;; Size: 134
-;; Unix time: 1582650534
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44677
-;; flags: qr rd ra ; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
-
-;; QUESTION SECTION:
-docs.bugbounty.com. IN A
-
-;; ANSWER SECTION:
-docs.bugbounty.com. 3600 IN A 185.199.111.153`
+	sampleData := `docs.bugbounty.com. A 185.199.111.153`
 
 	var domain string
 	var ip []string
@@ -34,29 +23,9 @@ docs.bugbounty.com. 3600 IN A 185.199.111.153`
 
 func TestParserParseMultipleDomains(t *testing.T) {
 	sampleData := `
-;; Server: 9.9.9.10:53
-;; Size: 134
-;; Unix time: 1582650534
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44677
-;; flags: qr rd ra ; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
+docs.bugbounty.com. A 185.199.111.153
 
-;; QUESTION SECTION:
-docs.bugbounty.com. IN A
-
-;; ANSWER SECTION:
-docs.bugbounty.com. 3600 IN A 185.199.111.153
-
-;; Server: 9.9.9.10:53
-;; Size: 134
-;; Unix time: 1582650534
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44677
-;; flags: qr rd ra ; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
-
-;; QUESTION SECTION:
-docs.hackerone.com. IN A
-
-;; ANSWER SECTION:
-docs.hackerone.com. 3600 IN A 185.199.111.152`
+docs.hackerone.com. A 185.199.111.152`
 
 	var domain []string
 	var ip []string
@@ -71,21 +40,11 @@ docs.hackerone.com. 3600 IN A 185.199.111.152`
 
 func TestParserParseMultipleIPCNAME(t *testing.T) {
 	sampleData := `
-;; Server: 9.9.9.10:53
-;; Size: 134
-;; Unix time: 1582650534
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44677
-;; flags: qr rd ra ; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
-
-;; QUESTION SECTION:
-docs.hackerone.com. IN A
-
-;; ANSWER SECTION:
-docs.hackerone.com. 300 IN CNAME hacker0x01.github.io.
-hacker0x01.github.io. 3600 IN A 185.199.111.153
-hacker0x01.github.io. 3600 IN A 185.199.108.153
-hacker0x01.github.io. 3600 IN A 185.199.109.153
-hacker0x01.github.io. 3600 IN A 185.199.110.153`
+docs.hackerone.com. CNAME hacker0x01.github.io.
+hacker0x01.github.io. A 185.199.111.153
+hacker0x01.github.io. A 185.199.108.153
+hacker0x01.github.io. A 185.199.109.153
+hacker0x01.github.io. A 185.199.110.153`
 
 	var domain string
 	var ip []string
@@ -100,19 +59,9 @@ hacker0x01.github.io. 3600 IN A 185.199.110.153`
 
 func TestParserParseMultipleCNAMEIP(t *testing.T) {
 	sampleData := `
-;; Server: 9.9.9.10:53
-;; Size: 134
-;; Unix time: 1582650534
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44677
-;; flags: qr rd ra ; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
-
-;; QUESTION SECTION:
-docs.bugbounty.com. IN A
-
-;; ANSWER SECTION:
-docs.bugbounty.com. 300 IN CNAME bugbounty.github.io.
-bugbounty.github.io. 300 IN CNAME bugbounty-local.herokudns.io.
-bugbounty-local.herokudns.io. 3600 IN A 185.199.111.153`
+docs.bugbounty.com. CNAME bugbounty.github.io.
+bugbounty.github.io. CNAME bugbounty-local.herokudns.io.
+bugbounty-local.herokudns.io. A 185.199.111.153`
 
 	var domain string
 	var ip []string
