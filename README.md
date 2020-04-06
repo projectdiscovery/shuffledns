@@ -68,11 +68,13 @@ This will display help for the tool. Here are all the switches it supports.
 
 ## Prerequisite
 
-shuffledns requires massdns to be installed in order to perform its operations. You can see the install instructions at [https://github.com/blechschmidt/massdns#compilation](https://github.com/blechschmidt/massdns#compilation). 
+shuffledns requires massdns to be installed in order to perform its operations. You can see the install instructions at [massdns project](https://github.com/blechschmidt/massdns#compilation). 
 
 If you place the binary in `/usr/bin/massdns` or `/usr/local/bin/massdns`, the tool will auto-detect the presence of the binary and use it. On windows, you need to supply the path to the binary for the tool to work.
 
-The tool also needs a list of valid resolvers. The [dnsvalidator](https://github.com/vortexau/dnsvalidator) project can be used to generate these lists. Either you can use a custom wordlist or use the commonspeak2 wordlists at [commonspeak2-wordlist](https://github.com/assetnote/commonspeak2-wordlists/tree/master/subdomains).
+The tool also needs a list of valid resolvers. The [dnsvalidator](https://github.com/vortexau/dnsvalidator) project can be used to generate these lists. 
+
+You also need to provide wordlist, you can use a custom wordlist or use the commonspeak2 wordlists at [commonspeak2-wordlist](https://github.com/assetnote/commonspeak2-wordlists/tree/master/subdomains).
 
 ## Direct Installation
 
