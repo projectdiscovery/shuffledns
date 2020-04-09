@@ -147,13 +147,16 @@ func (c *Client) filterWildcards(st *store.Store) error {
 					if wildcard {
 						c.wildcardIPMutex.Lock()
 						for ip := range ips {
+							// we add the single ip to the wildcard list
 							c.wildcardIPMap[ip] = struct{}{}
+							// we also mark the original ip as wildcard, since at least once it resolved to this host
+							c.wildcardIPMap[record.IP] = struct{}{}
 						}
 						c.wildcardIPMutex.Unlock()
 					}
 				}(host)
-				record.Validated = true
 			}
+			record.Validated = true
 		}
 
 		wildcardWg.Wait()
