@@ -127,39 +127,40 @@ func (c *Client) filterWildcards(st *store.Store) error {
 	wildcardWg := sizedwaitgroup.New(c.config.WildcardsThreads)
 
 	for _, record := range st.IP {
-		wildcardWg.Add()
-
-		go func(record *store.IPMeta) {
-			defer wildcardWg.Done()
-
-			// We've stumbled upon a wildcard, just ignore it.
-			c.wildcardIPMutex.Lock()
-			if _, ok := c.wildcardIPMap[record.IP]; ok {
-				c.wildcardIPMutex.Unlock()
-				return
-			}
+		// We've stumbled upon a wildcard, just ignore it.
+		c.wildcardIPMutex.Lock()
+		if _, ok := c.wildcardIPMap[record.IP]; ok {
 			c.wildcardIPMutex.Unlock()
+			continue
+		}
+		c.wildcardIPMutex.Unlock()
 
-			// If the same ip has been found more than 5 times, perform wildcard detection
-			// on it now, if an IP is found in the wildcard we add it to the wildcard map
-			// so that further runs don't require such filtering again.
-			if record.Counter >= 5 && !record.Validated {
-				for host := range record.Hostnames {
+		// If the same ip has been found more than 5 times, perform wildcard detection
+		// on it now, if an IP is found in the wildcard we add it to the wildcard map
+		// so that further runs don't require such filtering again.
+		if record.Counter >= 5 && !record.Validated {
+			for host := range record.Hostnames {
+				wildcardWg.Add()
+				go func(host string) {
+					defer wildcardWg.Done()
 					wildcard, ips := c.wildcardResolver.LookupHost(host)
 					if wildcard {
 						c.wildcardIPMutex.Lock()
 						for ip := range ips {
+							// we add the single ip to the wildcard list
 							c.wildcardIPMap[ip] = struct{}{}
+							// we also mark the original ip as wildcard, since at least once it resolved to this host
+							c.wildcardIPMap[record.IP] = struct{}{}
 						}
 						c.wildcardIPMutex.Unlock()
-						continue
 					}
-					record.Validated = true
-				}
+				}(host)
 			}
-		}(record)
+			record.Validated = true
+		}
+
+		wildcardWg.Wait()
 	}
-	wildcardWg.Wait()
 
 	// drop all wildcard from the store
 	for wildcardIP := range c.wildcardIPMap {
