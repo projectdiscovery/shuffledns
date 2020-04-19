@@ -50,7 +50,7 @@ func New(options *Options) (*Runner, error) {
 
 // Close releases all the resources and cleans up
 func (r *Runner) Close() {
-	os.RemoveAll(r.tempDir)
+	// os.RemoveAll(r.tempDir)
 }
 
 // findBinary searches for massdns binary in various pre-defined paths
@@ -180,6 +180,7 @@ func (r *Runner) runMassdns(inputFile string) {
 		TempDir:          r.tempDir,
 		OutputFile:       r.options.Output,
 		MassdnsRaw:       r.options.MassdnsRaw,
+		StrictWildcard:   r.options.StrictWildcard,
 	})
 	if err != nil {
 		gologger.Errorf("Could not create massdns client: %s\n", err)
