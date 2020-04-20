@@ -14,9 +14,6 @@ type IPMeta struct {
 	Hostnames map[string]struct{}
 	// Counter is the number of times the same ip was found for hosts
 	Counter int
-	// Validated indicates if the host was already checked for wildcards.
-	// If yes, ignore the current host.
-	Validated bool
 }
 
 // New creates a new storage for ip based wildcard removal
@@ -30,7 +27,7 @@ func New() *Store {
 func (s *Store) New(ip, hostname string) {
 	hostnames := make(map[string]struct{})
 	hostnames[hostname] = struct{}{}
-	s.IP[ip] = &IPMeta{IP: ip, Hostnames: hostnames, Counter: 1, Validated: false}
+	s.IP[ip] = &IPMeta{IP: ip, Hostnames: hostnames, Counter: 1}
 }
 
 // Exists indicates if an IP exists in the map

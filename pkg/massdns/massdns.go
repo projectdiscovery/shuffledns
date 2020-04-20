@@ -58,6 +58,7 @@ func New(config Config) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	resolver.AddServersFromList(excellentResolvers)
 
 	return &Client{

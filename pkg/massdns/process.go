@@ -135,35 +135,30 @@ func (c *Client) filterWildcards(st *store.Store) error {
 		}
 		c.wildcardIPMutex.Unlock()
 
-		// If StrictWildcard is enabled then each record is controlled
-		checkRecord := !record.Validated
-		// Otherwise if only if the same ip has been found more than 5 times
-		if !c.config.StrictWildcard {
-			checkRecord = record.Counter >= 5 && !record.Validated
-		}
-
 		// Perform wildcard detection on the ip, if an IP is found in the wildcard
 		// we add it to the wildcard map so that further runs don't require such filtering again.
-		if checkRecord {
+		if record.Counter >= 5 || c.config.StrictWildcard {
 			wildcardWg.Add()
 			go func(record *store.IPMeta) {
 				defer wildcardWg.Done()
 
 				for host := range record.Hostnames {
-					wildcard, ips := c.wildcardResolver.LookupHost(host)
-					if wildcard {
+					isWildcard, ips := c.wildcardResolver.LookupHost(host)
+					if len(ips) > 0 {
 						c.wildcardIPMutex.Lock()
 						for ip := range ips {
 							// we add the single ip to the wildcard list
 							c.wildcardIPMap[ip] = struct{}{}
 						}
+						c.wildcardIPMutex.Unlock()
+					}
+
+					if isWildcard {
+						c.wildcardIPMutex.Lock()
 						// we also mark the original ip as wildcard, since at least once it resolved to this host
 						c.wildcardIPMap[record.IP] = struct{}{}
-						// the record is a wildcard - we can drop it as a whole
-						record.Validated = true
 						c.wildcardIPMutex.Unlock()
-
-						return
+						break
 					}
 				}
 			}(record)
