@@ -61,7 +61,7 @@ This will display help for the tool. Here are all the switches it supports.
 | -v             | Show Verbose output                                     | shuffledns -v                        |
 | -version       | Show version of shuffledns                              | shuffledns -version                  |
 | -w             | File containing words to bruteforce for domain          | shuffledns -w words.txt              |
-| -wt            | Number of concurrent wildcard checks (default 25)       | shuffledns -wg 100                   |
+| -wt            | Number of concurrent wildcard checks (default 25)       | shuffledns -wt 100                   |
 | -raw-input     | File containing existing massdns output                 | shuffledns -massdns-file output.txt  |
 
 # Installation Instructions
