@@ -43,6 +43,15 @@ func (options *Options) validateOptions() error {
 		return nil
 	}
 
+	// Check if a list of domains to resolve has been provided either via list or stdin
+	if options.SubdomainsList != "" || options.Stdin {
+		// If the optional domain name is not specified, wildcard filtering will be automatically disabled
+		if options.Domain == "" {
+			gologger.Labelf("Wildcard filtering will be automatically disabled as no domain name has been provided")
+		}
+		return nil
+	}
+
 	// If domain was not provided and stdin was not provided, error out
 	if options.Domain == "" && !options.Stdin && options.Wordlist == "" {
 		return errors.New("no domain was provided for bruteforce")

@@ -56,16 +56,23 @@ func (c *Client) Process() error {
 		}
 	}
 
-	gologger.Infof("Parsing output and removing wildcards\n")
+	gologger.Infof("Parsing output\n")
 
 	err = c.parseMassDNSOutput(massDNSOutput, shstore)
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
 	}
 
-	err = c.filterWildcards(shstore)
-	if err != nil {
-		return fmt.Errorf("could not parse massdns output: %w", err)
+	gologger.Infof("Output Parsed\n")
+
+	// Perform wildcard filtering only if domain name has been specified
+	if c.config.Domain != "" {
+		gologger.Infof("Removing wildcards\n")
+		err = c.filterWildcards(shstore)
+		if err != nil {
+			return fmt.Errorf("could not parse massdns output: %w", err)
+		}
+		gologger.Infof("Wildcard Removed\n")
 	}
 
 	gologger.Infof("Finished enumeration, started writing output\n")
