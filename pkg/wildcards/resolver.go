@@ -65,6 +65,7 @@ func (w *Resolver) AddServersFromFile(file string) error {
 // of it's levels, check for wildcard on each one of them and if found any,
 // we remove all the hosts that have this IP from the map.
 func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
+	orig := make(map[string]struct{})
 	wildcards := make(map[string]struct{})
 
 	subdomainPart := strings.TrimSuffix(host, "."+w.domain)
@@ -74,15 +75,17 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 	// and create the wildcard generation prefix.
 	// We use a rand prefix at the beginning like %rand%.domain.tld
 	// A permutation is generated for each level of the subdomain.
-	hosts := make([]string, len(subdomainTokens)+1)
-	hosts[0] = w.domain
+	var hosts []string
+	hosts = append(hosts, host)
+	hosts = append(hosts, xid.New().String()+"."+w.domain)
 
 	for i := 0; i < len(subdomainTokens); i++ {
-		hosts[i+1] = strings.Join(subdomainTokens[i:], ".") + "." + w.domain
+		newhost := xid.New().String() + "." + strings.Join(subdomainTokens[i:], ".") + "." + w.domain
+		hosts = append(hosts, newhost)
 	}
 
 	// Iterate over all the hosts generated for rand.
-	for _, host := range hosts {
+	for _, h := range hosts {
 		// Round-robin over all the dns servers we have.
 		serverIndex := atomic.LoadInt32(&w.serversIndex)
 		if w.serversIndex >= int32(len(w.servers)-1) {
@@ -93,13 +96,15 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 		atomic.AddInt32(&w.serversIndex, 1)
 
 		var retryCount int
+
 	retry:
+
 		// Create a dns message and send it to the server
 		m := new(dns.Msg)
 		m.Id = dns.Id()
 		m.RecursionDesired = true
 		m.Question = make([]dns.Question, 1)
-		question := xid.New().String() + "." + dns.Fqdn(host)
+		question := dns.Fqdn(h)
 		m.Question[0] = dns.Question{
 			Name:   question,
 			Qtype:  dns.TypeA,
@@ -126,6 +131,11 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 			if t, ok := record.(*dns.A); ok {
 				r := t.A.String()
 
+				if host == h {
+					orig[r] = struct{}{}
+					continue
+				}
+
 				if _, ok := wildcards[r]; !ok {
 					wildcards[r] = struct{}{}
 				}
@@ -133,8 +143,12 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 		}
 	}
 
-	if len(wildcards) > 0 {
-		return true, wildcards
+	// check if original ip are among wildcards
+	for a := range orig {
+		if _, ok := wildcards[a]; ok {
+			return true, wildcards
+		}
 	}
-	return false, nil
+
+	return false, wildcards
 }

@@ -28,6 +28,7 @@ type Options struct {
 	Threads         int    // Thread controls the number of parallel host to enumerate
 	MassdnsRaw      string // MassdnsRaw perform wildcards filtering from an existing massdns output file
 	WildcardThreads int    // WildcardsThreads controls the number of parallel host to check for wildcard
+	StrictWildcard  bool   // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
 
 	Stdin bool // Stdin specifies whether stdin input was given to the process
 }
@@ -50,6 +51,7 @@ func ParseOptions() *Options {
 	flag.BoolVar(&options.NoColor, "nC", false, "Don't Use colors in output")
 	flag.IntVar(&options.Threads, "t", 10000, "Number of concurrent massdns resolves")
 	flag.StringVar(&options.MassdnsRaw, "raw-input", "", "Validate raw full massdns output")
+	flag.BoolVar(&options.StrictWildcard, "strict-wildcard", false, "Perform wildcard check on all found subdomains")
 	flag.IntVar(&options.WildcardThreads, "wt", 25, "Number of concurrent wildcard checks")
 
 	flag.Parse()

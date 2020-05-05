@@ -38,6 +38,8 @@ type Config struct {
 	WildcardsThreads int
 	// MassdnsRaw perform wildcards filtering from an existing massdns output file
 	MassdnsRaw string
+	// StrictWildcard controls whether the wildcard check should be performed on each result
+	StrictWildcard bool
 }
 
 // excellentResolvers contains some resolvers used in dns verification step
@@ -56,6 +58,7 @@ func New(config Config) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	resolver.AddServersFromList(excellentResolvers)
 
 	return &Client{
