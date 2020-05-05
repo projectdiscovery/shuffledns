@@ -56,16 +56,23 @@ func (c *Client) Process() error {
 		}
 	}
 
-	gologger.Infof("Parsing output and removing wildcards\n")
+	gologger.Infof("Started parsing massdns output\n")
 
 	err = c.parseMassDNSOutput(massDNSOutput, shstore)
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
 	}
 
-	err = c.filterWildcards(shstore)
-	if err != nil {
-		return fmt.Errorf("could not parse massdns output: %w", err)
+	gologger.Infof("Massdns output parsing compeleted\n")
+
+	// Perform wildcard filtering only if domain name has been specified
+	if c.config.Domain != "" {
+		gologger.Infof("Started removing wildcards records\n")
+		err = c.filterWildcards(shstore)
+		if err != nil {
+			return fmt.Errorf("could not parse massdns output: %w", err)
+		}
+		gologger.Infof("Wildcard removal completed\n")
 	}
 
 	gologger.Infof("Finished enumeration, started writing output\n")
@@ -75,7 +82,11 @@ func (c *Client) Process() error {
 }
 
 func (c *Client) runMassDNS(output string, store *store.Store) error {
-	gologger.Infof("Executing massdns on %s\n", c.config.Domain)
+	if c.config.Domain != "" {
+		gologger.Infof("Executing massdns on %s\n", c.config.Domain)
+	} else {
+		gologger.Infof("Executing massdns\n")
+	}
 	now := time.Now()
 	// Run the command on a temp file and wait for the output
 	cmd := exec.Command(c.config.MassdnsPath, []string{"-r", c.config.ResolversFile, "-o", "Snl", "-t", "A", c.config.InputFile, "-w", output, "-s", strconv.Itoa(c.config.Threads)}...)
