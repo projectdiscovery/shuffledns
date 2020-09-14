@@ -59,6 +59,7 @@ func (r *Runner) findBinary() string {
 	locations := []string{
 		"/usr/bin/massdns",
 		"/usr/local/bin/massdns",
+		"/data/data/com.termux/files/usr/bin/massdns",
 	}
 
 	for _, file := range locations {
