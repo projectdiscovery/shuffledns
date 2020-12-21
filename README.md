@@ -93,7 +93,7 @@ The installation is easy. You can download the pre-built binaries for your platf
 shuffledns requires go1.13+ to install successfully. Run the following command to get the repo - 
 
 ```bash
-> GO111MODULE=on go get -u -v github.com/projectdiscovery/shuffledns/cmd/shuffledns
+> GO111MODULE=on go get -v github.com/projectdiscovery/shuffledns/cmd/shuffledns
 ```
 
 In order to update the tool, you can use -u flag with `go get` command.
@@ -140,26 +140,6 @@ The -o command can be used to specify an output file.
 
 ```bash
 > shuffledns -d hackerone.com -w wordlist.txt -o output.txt
-```
-
-The subdomains discovered can be piped to other tools too. For example, you can pipe the host discovered by shuffledns to the [httprobe](https://github.com/tomnomnom/httprobe) tool by @tomnomnom which will then find running http servers on the host.
-
-```bash
-> echo hackerone.com | shuffledns -w wordlist.txt -r resolvers.txt -silent | httprobe
-
-http://docs.hackerone.com
-http://www.hackerone.com
-http://info.hackerone.com
-```
-
-or
-
-```bash
-> echo hackerone.com | subfinder | shuffledns -d hackerone.com -r resolvers.txt -silent | httprobe
-
-http://docs.hackerone.com
-http://www.hackerone.com
-http://info.hackerone.com
 ```
 
 ### A note on wildcards
