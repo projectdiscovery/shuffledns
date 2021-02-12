@@ -94,7 +94,7 @@ shuffledns requires `go1.14+` to install successfully. Run the following command
 
 **shuffledns** supports two types of operations.
 
-### Subdomain resolving
+<ins>**Subdomain resolving** </ins>
 
 To resolve a list of subdomains, you can pass the list of subdomains via the `list` option.
 
@@ -112,7 +112,7 @@ You can also pass the list of subdomains at standard input (STDIN). This allows 
 
 This uses the subdomains found passively by `subfinder` and resolves them with shuffledns returning only the unique and valid subdomains.
 
-### Subdomain bruteforcing
+<ins>**Subdomain Bruteforcing** </ins>
 
 shuffledns also supports bruteforce of a target with a given wordlist. You can use the `w` flag to pass a wordlist which will be used to generate permutations that will be resolved using massdns.
 
@@ -127,12 +127,6 @@ This will run the tool against `hackerone.com` with the wordlist `wordlist.txt`.
 ```
 
 ---
-
-The -o command can be used to specify an output file.
-
-```bash
-▶ shuffledns -d hackerone.com -w wordlist.txt -o output.txt
-```
 
 <table>
 <tr>
