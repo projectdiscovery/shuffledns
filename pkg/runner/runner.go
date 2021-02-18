@@ -34,7 +34,7 @@ func New(options *Options) (*Runner, error) {
 		if options.MassdnsPath == "" {
 			return nil, errors.New("could not find massdns binary")
 		}
-		gologger.Debugf("Discovered massdns binary at %s\n", options.MassdnsPath)
+		gologger.Debug().Msgf("Discovered massdns binary at %s\n", options.MassdnsPath)
 	}
 
 	// Create a temporary directory that will be removed at the end
@@ -109,7 +109,7 @@ func (r *Runner) processDomain() {
 	resolveFile := path.Join(r.tempDir, xid.New().String())
 	file, err := os.Create(resolveFile)
 	if err != nil {
-		gologger.Errorf("Could not create bruteforce list (%s): %s\n", r.tempDir, err)
+		gologger.Error().Msgf("Could not create bruteforce list (%s): %s\n", r.tempDir, err)
 		return
 	}
 	writer := bufio.NewWriter(file)
@@ -117,12 +117,12 @@ func (r *Runner) processDomain() {
 	// Read the input wordlist for bruteforce generation
 	inputFile, err := os.Open(r.options.Wordlist)
 	if err != nil {
-		gologger.Errorf("Could not read bruteforce wordlist (%s): %s\n", r.options.Wordlist, err)
+		gologger.Error().Msgf("Could not read bruteforce wordlist (%s): %s\n", r.options.Wordlist, err)
 		file.Close()
 		return
 	}
 
-	gologger.Infof("Started generating bruteforce permutation\n")
+	gologger.Info().Msgf("Started generating bruteforce permutation\n")
 
 	now := time.Now()
 	// Create permutation for domain with wordlist
@@ -139,7 +139,7 @@ func (r *Runner) processDomain() {
 	inputFile.Close()
 	file.Close()
 
-	gologger.Infof("Generating permutations took %s\n", time.Now().Sub(now))
+	gologger.Info().Msgf("Generating permutations took %s\n", time.Now().Sub(now))
 
 	// Run the actual massdns enumeration process
 	r.runMassdns(resolveFile)
@@ -154,7 +154,7 @@ func (r *Runner) processSubdomains() {
 		resolveFile = path.Join(r.tempDir, xid.New().String())
 		file, err := os.Create(resolveFile)
 		if err != nil {
-			gologger.Errorf("Could not create resolution list (%s): %s\n", r.tempDir, err)
+			gologger.Error().Msgf("Could not create resolution list (%s): %s\n", r.tempDir, err)
 			return
 		}
 		io.Copy(file, os.Stdin)
@@ -184,13 +184,13 @@ func (r *Runner) runMassdns(inputFile string) {
 		StrictWildcard:   r.options.StrictWildcard,
 	})
 	if err != nil {
-		gologger.Errorf("Could not create massdns client: %s\n", err)
+		gologger.Error().Msgf("Could not create massdns client: %s\n", err)
 		return
 	}
 
 	err = massdns.Process()
 	if err != nil {
-		gologger.Errorf("Could not run massdns: %s\n", err)
+		gologger.Error().Msgf("Could not run massdns: %s\n", err)
 	}
-	gologger.Infof("Finished resolving. Hack the Planet!\n")
+	gologger.Info().Msgf("Finished resolving. Hack the Planet!\n")
 }
