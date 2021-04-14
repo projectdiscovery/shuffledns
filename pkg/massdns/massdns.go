@@ -44,8 +44,6 @@ type Config struct {
 
 // excellentResolvers contains some resolvers used in dns verification step
 var excellentResolvers = []string{
-	"1.1.1.1",
-	"1.0.0.1",
 	"8.8.8.8",
 	"8.8.4.4",
 }
