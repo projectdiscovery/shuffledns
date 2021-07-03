@@ -133,13 +133,13 @@ func (r *Runner) processDomain() {
 		if text == "" {
 			continue
 		}
-		writer.WriteString(text + "." + r.options.Domain + "\n")
+		_, _ = writer.WriteString(text + "." + r.options.Domain + "\n")
 	}
 	writer.Flush()
 	inputFile.Close()
 	file.Close()
 
-	gologger.Info().Msgf("Generating permutations took %s\n", time.Now().Sub(now))
+	gologger.Info().Msgf("Generating permutations took %s\n", time.Since(now))
 
 	// Run the actual massdns enumeration process
 	r.runMassdns(resolveFile)
@@ -157,7 +157,7 @@ func (r *Runner) processSubdomains() {
 			gologger.Error().Msgf("Could not create resolution list (%s): %s\n", r.tempDir, err)
 			return
 		}
-		io.Copy(file, os.Stdin)
+		_, _ = io.Copy(file, os.Stdin)
 		file.Close()
 	} else {
 		// Use the file if user has provided one

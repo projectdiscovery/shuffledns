@@ -96,7 +96,7 @@ func (c *Client) runMassDNS(output string, store *store.Store) error {
 	if err != nil {
 		return fmt.Errorf("could not execute massdns: %w\ndetailed error: %s", err, stderr.String())
 	}
-	gologger.Info().Msgf("Massdns execution took %s\n", time.Now().Sub(now))
+	gologger.Info().Msgf("Massdns execution took %s\n", time.Since(now))
 	return nil
 }
 
@@ -217,7 +217,7 @@ func (c *Client) writeOutput(store *store.Store) error {
 			data := buffer.String()
 
 			if output != nil {
-				w.WriteString(data)
+				_, _ = w.WriteString(data)
 			}
 			gologger.Silent().Msgf("%s", data)
 			buffer.Reset()
