@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -106,7 +106,7 @@ func (r *Runner) RunEnumeration() {
 
 // processDomain processes the bruteforce for a domain using a wordlist
 func (r *Runner) processDomain() {
-	resolveFile := path.Join(r.tempDir, xid.New().String())
+	resolveFile := filepath.Join(r.tempDir, xid.New().String())
 	file, err := os.Create(resolveFile)
 	if err != nil {
 		gologger.Error().Msgf("Could not create bruteforce list (%s): %s\n", r.tempDir, err)
@@ -151,7 +151,7 @@ func (r *Runner) processSubdomains() {
 
 	// If there is stdin, write the resolution list to the file
 	if r.options.Stdin {
-		resolveFile = path.Join(r.tempDir, xid.New().String())
+		resolveFile = filepath.Join(r.tempDir, xid.New().String())
 		file, err := os.Create(resolveFile)
 		if err != nil {
 			gologger.Error().Msgf("Could not create resolution list (%s): %s\n", r.tempDir, err)
@@ -171,17 +171,18 @@ func (r *Runner) processSubdomains() {
 // runMassdns runs the massdns tool on the list of inputs
 func (r *Runner) runMassdns(inputFile string) {
 	massdns, err := massdns.New(massdns.Config{
-		Domain:           r.options.Domain,
-		Retries:          r.options.Retries,
-		MassdnsPath:      r.options.MassdnsPath,
-		Threads:          r.options.Threads,
-		WildcardsThreads: r.options.WildcardThreads,
-		InputFile:        inputFile,
-		ResolversFile:    r.options.ResolversFile,
-		TempDir:          r.tempDir,
-		OutputFile:       r.options.Output,
-		MassdnsRaw:       r.options.MassdnsRaw,
-		StrictWildcard:   r.options.StrictWildcard,
+		Domain:             r.options.Domain,
+		Retries:            r.options.Retries,
+		MassdnsPath:        r.options.MassdnsPath,
+		Threads:            r.options.Threads,
+		WildcardsThreads:   r.options.WildcardThreads,
+		InputFile:          inputFile,
+		ResolversFile:      r.options.ResolversFile,
+		TempDir:            r.tempDir,
+		OutputFile:         r.options.Output,
+		MassdnsRaw:         r.options.MassdnsRaw,
+		StrictWildcard:     r.options.StrictWildcard,
+		WildcardOutputFile: r.options.WildcardOutputFile,
 	})
 	if err != nil {
 		gologger.Error().Msgf("Could not create massdns client: %s\n", err)
@@ -192,5 +193,10 @@ func (r *Runner) runMassdns(inputFile string) {
 	if err != nil {
 		gologger.Error().Msgf("Could not run massdns: %s\n", err)
 	}
+
+	if r.options.WildcardOutputFile != "" {
+		_ = massdns.DumpWildcardsToFile(r.options.WildcardOutputFile)
+	}
+
 	gologger.Info().Msgf("Finished resolving. Hack the Planet!\n")
 }
