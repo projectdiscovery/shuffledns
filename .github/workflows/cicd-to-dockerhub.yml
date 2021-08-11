@@ -1,4 +1,3 @@
-
 name: cicd-to-dockerhub
 
 on:
