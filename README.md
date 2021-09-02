@@ -88,6 +88,7 @@ shuffledns requires `go1.14+` to install successfully. Run the following command
 
 ```bash
 ▶ GO111MODULE=on go get -v github.com/projectdiscovery/shuffledns/cmd/shuffledns
+▶ go install github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
 ```
 
 ## Running shuffledns
