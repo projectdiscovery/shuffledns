@@ -40,6 +40,8 @@ type Config struct {
 	MassdnsRaw string
 	// StrictWildcard controls whether the wildcard check should be performed on each result
 	StrictWildcard bool
+	// AllowRoot allows massdns to run as root via --root param
+	AllowRoot bool
 }
 
 // excellentResolvers contains some resolvers used in dns verification step

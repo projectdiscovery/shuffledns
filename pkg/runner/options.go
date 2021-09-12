@@ -29,6 +29,7 @@ type Options struct {
 	MassdnsRaw      string // MassdnsRaw perform wildcards filtering from an existing massdns output file
 	WildcardThreads int    // WildcardsThreads controls the number of parallel host to check for wildcard
 	StrictWildcard  bool   // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
+	AllowRoot       bool   // AllowRoot allows massdns to run as root user via --root param
 
 	Stdin bool // Stdin specifies whether stdin input was given to the process
 }
@@ -53,6 +54,7 @@ func ParseOptions() *Options {
 	flag.StringVar(&options.MassdnsRaw, "raw-input", "", "Validate raw full massdns output")
 	flag.BoolVar(&options.StrictWildcard, "strict-wildcard", false, "Perform wildcard check on all found subdomains")
 	flag.IntVar(&options.WildcardThreads, "wt", 25, "Number of concurrent wildcard checks")
+	flag.BoolVar(&options.AllowRoot, "root", false, "Allow to run as root user")
 
 	flag.Parse()
 
