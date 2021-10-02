@@ -3,6 +3,7 @@ package massdns
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -213,8 +214,19 @@ func (c *Client) writeOutput(store *store.Store) error {
 			uniqueMap[hostname] = struct{}{}
 
 			if c.config.Json {
-				hostnameJson := fmt.Sprintf(`{"hostname": "%s"}`, hostname)
-				buffer.WriteString(hostnameJson)
+				rawJson := fmt.Sprintf(`{"hostname": "%s"}`, hostname)
+				var raw map[string]interface{}
+
+				if err := json.Unmarshal([]byte(rawJson), &raw); err != nil {
+					return fmt.Errorf("could not unmarshal output as ndjson: %v", err)
+				}
+
+				hostnameJson, err := json.Marshal(raw)
+				if err != nil {
+					return fmt.Errorf("could not marshal output as ndjson: %v", err)
+				}
+
+				buffer.WriteString(string(hostnameJson))
 				buffer.WriteString("\n")
 			} else {
 				buffer.WriteString(hostname)

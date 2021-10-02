@@ -34,7 +34,7 @@ type Config struct {
 	TempDir string
 	// OutputFile is the file to use for massdns output
 	OutputFile string
-	// Json is format ouput to use
+	// Json is format ouput to ndjson format
 	Json bool
 	// WildcardsThreads is the number of wildcards concurrent threads
 	WildcardsThreads int
