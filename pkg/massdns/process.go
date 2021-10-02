@@ -63,7 +63,7 @@ func (c *Client) Process() error {
 		return fmt.Errorf("could not parse massdns output: %w", err)
 	}
 
-	gologger.Infof("Massdns output parsing compeleted\n")
+	gologger.Infof("Massdns output parsing completed\n")
 
 	// Perform wildcard filtering only if domain name has been specified
 	if c.config.Domain != "" {
@@ -212,8 +212,15 @@ func (c *Client) writeOutput(store *store.Store) error {
 			}
 			uniqueMap[hostname] = struct{}{}
 
-			buffer.WriteString(hostname)
-			buffer.WriteString("\n")
+			if c.config.Json {
+				hostnameJson := fmt.Sprintf(`{"hostname": "%s"}`, hostname)
+				buffer.WriteString(hostnameJson)
+				buffer.WriteString("\n")
+			} else {
+				buffer.WriteString(hostname)
+				buffer.WriteString("\n")
+			}
+
 			data := buffer.String()
 
 			if output != nil {

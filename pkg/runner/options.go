@@ -20,6 +20,7 @@ type Options struct {
 	Wordlist        string // Wordlist is a wordlist to use for enumeration
 	MassdnsPath     string // MassdnsPath contains the path to massdns binary
 	Output          string // Output is the file to write found subdomains to.
+	Json            bool   // Json is the format for making output as json
 	Silent          bool   // Silent suppresses any extra text and only writes found host:port to screen
 	Version         bool   // Version specifies if we should just show version and exit
 	Retries         int    // Retries is the number of retries for dns enumeration
@@ -44,6 +45,7 @@ func ParseOptions() *Options {
 	flag.StringVar(&options.Wordlist, "w", "", "File containing words to bruteforce for domain")
 	flag.StringVar(&options.MassdnsPath, "massdns", "", "Path to the massdns binary")
 	flag.StringVar(&options.Output, "o", "", "File to write output to (optional)")
+	flag.BoolVar(&options.Json, "json", false, "Make output format as json")
 	flag.BoolVar(&options.Silent, "silent", false, "Show only subdomains in output")
 	flag.BoolVar(&options.Version, "version", false, "Show version of shuffledns")
 	flag.IntVar(&options.Retries, "retries", 5, "Number of retries for dns enumeration")

@@ -180,6 +180,7 @@ func (r *Runner) runMassdns(inputFile string) {
 		ResolversFile:    r.options.ResolversFile,
 		TempDir:          r.tempDir,
 		OutputFile:       r.options.Output,
+		Json:             r.options.Json,
 		MassdnsRaw:       r.options.MassdnsRaw,
 		StrictWildcard:   r.options.StrictWildcard,
 	})
