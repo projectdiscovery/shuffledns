@@ -1,14 +1,21 @@
 module github.com/projectdiscovery/shuffledns
 
-go 1.14
+go 1.17
 
 require (
-	github.com/json-iterator/go v1.1.11 // indirect
-	github.com/miekg/dns v1.1.43
-	github.com/projectdiscovery/gologger v1.1.4
+	github.com/miekg/dns v1.1.29
+	github.com/projectdiscovery/gologger v1.0.0
 	github.com/remeh/sizedwaitgroup v1.0.0
-	github.com/rs/xid v1.3.0
-	github.com/stretchr/testify v1.7.0
-	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
+	github.com/rs/xid v1.2.1
+	github.com/stretchr/testify v1.5.1
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.0 // indirect
+	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
+	golang.org/x/net v0.0.0-20190923162816-aa69164e4478 // indirect
+	golang.org/x/sys v0.0.0-20210908233432-aa78b53d3365 // indirect
+	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
