@@ -13,22 +13,23 @@ import (
 // Options contains the configuration options for tuning
 // the active dns resolving process.
 type Options struct {
-	Directory       string // Directory is a directory for temporary data
-	Domain          string // Domain is the domain to find subdomains
-	SubdomainsList  string // SubdomainsList is the file containing list of hosts to resolve
-	ResolversFile   string // ResolversFile is the file containing resolvers to use for enumeration
-	Wordlist        string // Wordlist is a wordlist to use for enumeration
-	MassdnsPath     string // MassdnsPath contains the path to massdns binary
-	Output          string // Output is the file to write found subdomains to.
-	Silent          bool   // Silent suppresses any extra text and only writes found host:port to screen
-	Version         bool   // Version specifies if we should just show version and exit
-	Retries         int    // Retries is the number of retries for dns enumeration
-	Verbose         bool   // Verbose flag indicates whether to show verbose output or not
-	NoColor         bool   // No-Color disables the colored output
-	Threads         int    // Thread controls the number of parallel host to enumerate
-	MassdnsRaw      string // MassdnsRaw perform wildcards filtering from an existing massdns output file
-	WildcardThreads int    // WildcardsThreads controls the number of parallel host to check for wildcard
-	StrictWildcard  bool   // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
+	Directory          string // Directory is a directory for temporary data
+	Domain             string // Domain is the domain to find subdomains
+	SubdomainsList     string // SubdomainsList is the file containing list of hosts to resolve
+	ResolversFile      string // ResolversFile is the file containing resolvers to use for enumeration
+	Wordlist           string // Wordlist is a wordlist to use for enumeration
+	MassdnsPath        string // MassdnsPath contains the path to massdns binary
+	Output             string // Output is the file to write found subdomains to.
+	Silent             bool   // Silent suppresses any extra text and only writes found host:port to screen
+	Version            bool   // Version specifies if we should just show version and exit
+	Retries            int    // Retries is the number of retries for dns enumeration
+	Verbose            bool   // Verbose flag indicates whether to show verbose output or not
+	NoColor            bool   // No-Color disables the colored output
+	Threads            int    // Thread controls the number of parallel host to enumerate
+	MassdnsRaw         string // MassdnsRaw perform wildcards filtering from an existing massdns output file
+	WildcardThreads    int    // WildcardsThreads controls the number of parallel host to check for wildcard
+	StrictWildcard     bool   // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
+	WildcardOutputFile string // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
 
 	Stdin bool // Stdin specifies whether stdin input was given to the process
 }
@@ -53,6 +54,7 @@ func ParseOptions() *Options {
 	flag.StringVar(&options.MassdnsRaw, "raw-input", "", "Validate raw full massdns output")
 	flag.BoolVar(&options.StrictWildcard, "strict-wildcard", false, "Perform wildcard check on all found subdomains")
 	flag.IntVar(&options.WildcardThreads, "wt", 25, "Number of concurrent wildcard checks")
+	flag.StringVar(&options.WildcardOutputFile, "wildcard-output-file", "", "Dump wildcard ips to output file")
 
 	flag.Parse()
 

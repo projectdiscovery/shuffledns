@@ -1,6 +1,8 @@
 package massdns
 
 import (
+	"bufio"
+	"errors"
 	"os"
 )
 
@@ -14,4 +16,23 @@ func IsBlankFile(file string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+// DumpWildcardsToFile dumps the wildcard ips list to file
+func (c *Client) DumpWildcardsToFile(filename string) error {
+	if len(c.wildcardIPMap) == 0 {
+		return errors.New("no wildcards")
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	bw := bufio.NewWriter(f)
+	for k := range c.wildcardIPMap {
+		_, _ = bw.WriteString(k + "\n")
+	}
+	defer bw.Flush()
+	return nil
 }

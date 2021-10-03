@@ -40,6 +40,8 @@ type Config struct {
 	MassdnsRaw string
 	// StrictWildcard controls whether the wildcard check should be performed on each result
 	StrictWildcard bool
+	// WildcardOutputFile is the file where the list of wildcards is dumped
+	WildcardOutputFile string
 }
 
 // excellentResolvers contains some resolvers used in dns verification step

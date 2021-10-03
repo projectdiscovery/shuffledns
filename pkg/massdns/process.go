@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -41,7 +41,7 @@ func (c *Client) Process() error {
 	defer shstore.Close()
 
 	// Set the correct target file
-	massDNSOutput := path.Join(c.config.TempDir, xid.New().String())
+	massDNSOutput := filepath.Join(c.config.TempDir, xid.New().String())
 	if c.config.MassdnsRaw != "" {
 		massDNSOutput = c.config.MassdnsRaw
 	}
