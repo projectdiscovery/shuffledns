@@ -64,7 +64,7 @@ func (c *Client) Process() error {
 		return fmt.Errorf("could not parse massdns output: %w", err)
 	}
 
-	gologger.Infof("Massdns output parsing completed\n")
+	gologger.Info().Msgf("Massdns output parsing completed\n")
 
 	// Perform wildcard filtering only if domain name has been specified
 	if c.config.Domain != "" {

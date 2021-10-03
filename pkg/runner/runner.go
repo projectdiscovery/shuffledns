@@ -171,18 +171,19 @@ func (r *Runner) processSubdomains() {
 // runMassdns runs the massdns tool on the list of inputs
 func (r *Runner) runMassdns(inputFile string) {
 	massdns, err := massdns.New(massdns.Config{
-		Domain:           r.options.Domain,
-		Retries:          r.options.Retries,
-		MassdnsPath:      r.options.MassdnsPath,
-		Threads:          r.options.Threads,
-		WildcardsThreads: r.options.WildcardThreads,
-		InputFile:        inputFile,
-		ResolversFile:    r.options.ResolversFile,
-		TempDir:          r.tempDir,
-		OutputFile:       r.options.Output,
-		Json:             r.options.Json,
-		MassdnsRaw:       r.options.MassdnsRaw,
-		StrictWildcard:   r.options.StrictWildcard,
+		Domain:             r.options.Domain,
+		Retries:            r.options.Retries,
+		MassdnsPath:        r.options.MassdnsPath,
+		Threads:            r.options.Threads,
+		WildcardsThreads:   r.options.WildcardThreads,
+		InputFile:          inputFile,
+		ResolversFile:      r.options.ResolversFile,
+		TempDir:            r.tempDir,
+		OutputFile:         r.options.Output,
+		Json:               r.options.Json,
+		MassdnsRaw:         r.options.MassdnsRaw,
+		StrictWildcard:     r.options.StrictWildcard,
+		WildcardOutputFile: r.options.WildcardOutputFile,
 	})
 	if err != nil {
 		gologger.Error().Msgf("Could not create massdns client: %s\n", err)
