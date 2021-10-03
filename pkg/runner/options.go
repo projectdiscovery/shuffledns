@@ -55,6 +55,7 @@ func ParseOptions() *Options {
 	flag.StringVar(&options.MassdnsRaw, "raw-input", "", "Validate raw full massdns output")
 	flag.BoolVar(&options.StrictWildcard, "strict-wildcard", false, "Perform wildcard check on all found subdomains")
 	flag.IntVar(&options.WildcardThreads, "wt", 25, "Number of concurrent wildcard checks")
+	flag.StringVar(&options.WildcardOutputFile, "wildcard-output-file", "", "Dump wildcard ips to output file")
 
 	flag.Parse()
 
@@ -68,20 +69,20 @@ func ParseOptions() *Options {
 	showBanner()
 
 	if options.Version {
-		gologger.Infof("Current Version: %s\n", Version)
+		gologger.Info().Msgf("Current Version: %s\n", Version)
 		os.Exit(0)
 	}
 	// Validate the options passed by the user and if any
 	// invalid options have been used, exit.
 	err := options.validateOptions()
 	if err != nil {
-		gologger.Fatalf("Program exiting: %s\n", err)
+		gologger.Fatal().Msgf("Program exiting: %s\n", err)
 	}
 
 	// Set the domain in the config if provided by user from the stdin
 	if options.Stdin && options.Wordlist != "" {
 		buffer := &bytes.Buffer{}
-		io.Copy(buffer, os.Stdin)
+		_, _ = io.Copy(buffer, os.Stdin)
 		options.Domain = strings.TrimRight(buffer.String(), "\r\n")
 	}
 

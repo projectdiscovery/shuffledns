@@ -4,19 +4,18 @@ on:
     branches:
       - master
   pull_request:
-  
-jobs:          
+
+jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
+
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.14
-
-      - name: Check out code
-        uses: actions/checkout@v2
+          go-version: 1.17
 
       - name: Test
         run: go test .
