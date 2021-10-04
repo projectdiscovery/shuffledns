@@ -78,6 +78,13 @@ func ParseOptions() *Options {
 		gologger.Fatal().Msgf("Program exiting: %s\n", err)
 	}
 
+	// if all the flags are provided via cli we ignore stdin by draining it
+	if options.Domain != "" && options.ResolversFile != "" && options.Wordlist != "" {
+		// drain stdin
+		_, _ = io.Copy(io.Discard, os.Stdin)
+		options.Stdin = false
+	}
+
 	// Set the domain in the config if provided by user from the stdin
 	if options.Stdin && options.Wordlist != "" {
 		buffer := &bytes.Buffer{}
