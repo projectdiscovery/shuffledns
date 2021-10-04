@@ -214,16 +214,9 @@ func (c *Client) writeOutput(store *store.Store) error {
 			uniqueMap[hostname] = struct{}{}
 
 			if c.config.Json {
-				rawJson := fmt.Sprintf(`{"hostname": "%s"}`, hostname)
-				var raw map[string]interface{}
-
-				if err := json.Unmarshal([]byte(rawJson), &raw); err != nil {
-					return fmt.Errorf("could not unmarshal output as ndjson: %v", err)
-				}
-
-				hostnameJson, err := json.Marshal(raw)
+				hostnameJson, err := json.Marshal(map[string]interface{}{"hostname": hostname})
 				if err != nil {
-					return fmt.Errorf("could not marshal output as ndjson: %v", err)
+					return fmt.Errorf("could not marshal output as json: %v", err)
 				}
 
 				buffer.WriteString(string(hostnameJson))
