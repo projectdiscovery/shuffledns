@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/Mzack9999/roundrobin v0.0.0-20211019094217-f3f5553da353 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect

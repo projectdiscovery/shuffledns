@@ -5,15 +5,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Mzack9999/roundrobin/transport"
 	"github.com/miekg/dns"
-	"github.com/projectdiscovery/shuffledns/pkg/roundrobin"
 	"github.com/rs/xid"
 )
 
 // Resolver represents a dns resolver for removing wildcards
 type Resolver struct {
 	// servers contains the dns servers to use
-	servers *roundrobin.RoundRobin
+	servers *transport.RoundTransport
 	// domain is the domain to perform enumeration on
 	domain string
 	// maxRetries is the maximum number of retries allowed
@@ -34,7 +34,7 @@ func (w *Resolver) AddServersFromList(list []string) {
 	for i := 0; i < len(list); i++ {
 		list[i] = list[i] + ":53"
 	}
-	w.servers, _ = roundrobin.New(list...)
+	w.servers, _ = transport.New(list...)
 }
 
 // AddServersFromFile adds the resolvers from a file to the list of servers
@@ -55,7 +55,7 @@ func (w *Resolver) AddServersFromFile(file string) error {
 		servers = append(servers, text+":53")
 	}
 
-	w.servers, _ = roundrobin.New(servers...)
+	w.servers, _ = transport.New(servers...)
 
 	return nil
 }
