@@ -87,7 +87,7 @@ The tool also needs a list of valid resolvers. The [dnsvalidator](https://github
 shuffledns requires `go1.14+` to install successfully. Run the following command to get the repo - 
 
 ```bash
-▶ GO111MODULE=on go get -v github.com/projectdiscovery/shuffledns/cmd/shuffledns
+▶ GO111MODULE=on go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
 ```
 
 ## Running shuffledns
