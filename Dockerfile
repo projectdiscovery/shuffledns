@@ -5,7 +5,7 @@ ENV GO111MODULE on
 WORKDIR github.com/projectdiscovery/shuffledns/cmd/shuffledns
 RUN go install ./...
 
-FROM alpine:3.14
+FROM alpine:3.15.0
 RUN apk --update --no-cache add ldns \
   && apk --no-cache --virtual .deps add ldns-dev \
                                         git \
