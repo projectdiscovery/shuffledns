@@ -87,7 +87,7 @@ The tool also needs a list of valid resolvers. The [dnsvalidator](https://github
 shuffledns requires `go1.14+` to install successfully. Run the following command to get the repo - 
 
 ```bash
-▶ GO111MODULE=on go get -v github.com/projectdiscovery/shuffledns/cmd/shuffledns
+ GO111MODULE=on go get -v github.com/projectdiscovery/shuffledns/cmd/shuffledns
 ```
 
 ## Running shuffledns
@@ -99,7 +99,7 @@ shuffledns requires `go1.14+` to install successfully. Run the following command
 To resolve a list of subdomains, you can pass the list of subdomains via the `list` option.
 
 ```bash
-▶ shuffledns -d example.com -list example-subdomains.txt -r resolvers.txt
+  shuffledns -d example.com -list example-subdomains.txt -r resolvers.txt
 ```
 
 This will run the tool against subdomains in `example-subdomains.txt` and returns the results. The tool uses the resolvers specified with `-r` flag to do the resolving.
