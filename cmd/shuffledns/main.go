@@ -9,11 +9,11 @@ func main() {
 	// Parse the command line flags and read config files
 	options := runner.ParseOptions()
 
-	runner, err := runner.New(options)
+	massdnsRunner, err := runner.New(options)
 	if err != nil {
-		gologger.Fatalf("Could not create runner: %s\n", err)
+		gologger.Fatal().Msgf("Could not create runner: %s\n", err)
 	}
 
-	runner.RunEnumeration()
-	runner.Close()
+	massdnsRunner.RunEnumeration()
+	massdnsRunner.Close()
 }

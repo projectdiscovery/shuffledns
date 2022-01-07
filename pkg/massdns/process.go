@@ -3,11 +3,12 @@ package massdns
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -41,7 +42,7 @@ func (c *Client) Process() error {
 	defer shstore.Close()
 
 	// Set the correct target file
-	massDNSOutput := path.Join(c.config.TempDir, xid.New().String())
+	massDNSOutput := filepath.Join(c.config.TempDir, xid.New().String())
 	if c.config.MassdnsRaw != "" {
 		massDNSOutput = c.config.MassdnsRaw
 	}
@@ -49,33 +50,33 @@ func (c *Client) Process() error {
 	// Check if we need to run massdns
 	if c.config.MassdnsRaw == "" {
 		// Create a temporary file for the massdns output
-		gologger.Infof("Creating temporary massdns output file: %s\n", massDNSOutput)
+		gologger.Info().Msgf("Creating temporary massdns output file: %s\n", massDNSOutput)
 		err = c.runMassDNS(massDNSOutput, shstore)
 		if err != nil {
 			return fmt.Errorf("could not execute massdns: %w", err)
 		}
 	}
 
-	gologger.Infof("Started parsing massdns output\n")
+	gologger.Info().Msgf("Started parsing massdns output\n")
 
 	err = c.parseMassDNSOutput(massDNSOutput, shstore)
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
 	}
 
-	gologger.Infof("Massdns output parsing compeleted\n")
+	gologger.Info().Msgf("Massdns output parsing completed\n")
 
 	// Perform wildcard filtering only if domain name has been specified
 	if c.config.Domain != "" {
-		gologger.Infof("Started removing wildcards records\n")
+		gologger.Info().Msgf("Started removing wildcards records\n")
 		err = c.filterWildcards(shstore)
 		if err != nil {
 			return fmt.Errorf("could not parse massdns output: %w", err)
 		}
-		gologger.Infof("Wildcard removal completed\n")
+		gologger.Info().Msgf("Wildcard removal completed\n")
 	}
 
-	gologger.Infof("Finished enumeration, started writing output\n")
+	gologger.Info().Msgf("Finished enumeration, started writing output\n")
 
 	// Write the final elaborated list out
 	return c.writeOutput(shstore)
@@ -83,9 +84,9 @@ func (c *Client) Process() error {
 
 func (c *Client) runMassDNS(output string, store *store.Store) error {
 	if c.config.Domain != "" {
-		gologger.Infof("Executing massdns on %s\n", c.config.Domain)
+		gologger.Info().Msgf("Executing massdns on %s\n", c.config.Domain)
 	} else {
-		gologger.Infof("Executing massdns\n")
+		gologger.Info().Msgf("Executing massdns\n")
 	}
 	now := time.Now()
 	// Run the command on a temp file and wait for the output
@@ -96,7 +97,7 @@ func (c *Client) runMassDNS(output string, store *store.Store) error {
 	if err != nil {
 		return fmt.Errorf("could not execute massdns: %w\ndetailed error: %s", err, stderr.String())
 	}
-	gologger.Infof("Massdns execution took %s\n", time.Now().Sub(now))
+	gologger.Info().Msgf("Massdns execution took %s\n", time.Since(now))
 	return nil
 }
 
@@ -212,14 +213,25 @@ func (c *Client) writeOutput(store *store.Store) error {
 			}
 			uniqueMap[hostname] = struct{}{}
 
-			buffer.WriteString(hostname)
-			buffer.WriteString("\n")
+			if c.config.Json {
+				hostnameJson, err := json.Marshal(map[string]interface{}{"hostname": hostname})
+				if err != nil {
+					return fmt.Errorf("could not marshal output as json: %v", err)
+				}
+
+				buffer.WriteString(string(hostnameJson))
+				buffer.WriteString("\n")
+			} else {
+				buffer.WriteString(hostname)
+				buffer.WriteString("\n")
+			}
+
 			data := buffer.String()
 
 			if output != nil {
-				w.WriteString(data)
+				_, _ = w.WriteString(data)
 			}
-			gologger.Silentf("%s", data)
+			gologger.Silent().Msgf("%s", data)
 			buffer.Reset()
 		}
 	}

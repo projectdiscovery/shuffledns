@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"os"
 	"strings"
-	"sync/atomic"
 
+	"github.com/Mzack9999/roundrobin/transport"
 	"github.com/miekg/dns"
 	"github.com/rs/xid"
 )
@@ -13,10 +13,7 @@ import (
 // Resolver represents a dns resolver for removing wildcards
 type Resolver struct {
 	// servers contains the dns servers to use
-	servers []string
-	// serversIndex contains the current pointer to servers.
-	// All the DNS resolvers are used in a round robin fashion.
-	serversIndex int32
+	servers *transport.RoundTransport
 	// domain is the domain to perform enumeration on
 	domain string
 	// maxRetries is the maximum number of retries allowed
@@ -26,19 +23,18 @@ type Resolver struct {
 // NewResolver initializes and creates a new resolver to find wildcards
 func NewResolver(domain string, retries int) (*Resolver, error) {
 	resolver := &Resolver{
-		servers:      []string{},
-		serversIndex: 0,
-		domain:       domain,
-		maxRetries:   retries,
+		domain:     domain,
+		maxRetries: retries,
 	}
 	return resolver, nil
 }
 
 // AddServersFromList adds the resolvers from a list of servers
 func (w *Resolver) AddServersFromList(list []string) {
-	for _, server := range list {
-		w.servers = append(w.servers, server+":53")
+	for i := 0; i < len(list); i++ {
+		list[i] = list[i] + ":53"
 	}
+	w.servers, _ = transport.New(list...)
 }
 
 // AddServersFromFile adds the resolvers from a file to the list of servers
@@ -49,14 +45,18 @@ func (w *Resolver) AddServersFromFile(file string) error {
 	}
 	defer f.Close()
 
+	var servers []string
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		text := scanner.Text()
 		if text == "" {
 			continue
 		}
-		w.servers = append(w.servers, text+":53")
+		servers = append(servers, text+":53")
 	}
+
+	w.servers, _ = transport.New(servers...)
+
 	return nil
 }
 
@@ -86,19 +86,9 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 
 	// Iterate over all the hosts generated for rand.
 	for _, h := range hosts {
-		// Round-robin over all the dns servers we have.
-		serverIndex := atomic.LoadInt32(&w.serversIndex)
-		if w.serversIndex >= int32(len(w.servers)-1) {
-			atomic.StoreInt32(&w.serversIndex, 0)
-			serverIndex = 0
-		}
-		resolver := w.servers[serverIndex]
-		atomic.AddInt32(&w.serversIndex, 1)
-
+		resolver := w.servers.Next()
 		var retryCount int
-
 	retry:
-
 		// Create a dns message and send it to the server
 		m := new(dns.Msg)
 		m.Id = dns.Id()

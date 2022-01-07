@@ -1,11 +1,8 @@
-FROM golang:1.17-alpine as build
+FROM golang:1.17.5-alpine as build-env
 RUN apk --no-cache add git
-RUN go get -u -v github.com/projectdiscovery/shuffledns/cmd/shuffledns; exit 0
-ENV GO111MODULE on
-WORKDIR github.com/projectdiscovery/shuffledns/cmd/shuffledns
-RUN go install ./...
+RUN go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
 
-FROM alpine:3.14
+FROM alpine:3.15.0
 RUN apk --update --no-cache add ldns \
   && apk --no-cache --virtual .deps add ldns-dev \
                                         git \
@@ -19,6 +16,6 @@ RUN apk --update --no-cache add ldns \
   && rm -rf /massdns \
   && apk del .deps
 
-COPY --from=build /go/bin/shuffledns /usr/bin/shuffledns
+COPY --from=build-env /go/bin/shuffledns /usr/bin/shuffledns
 ENV HOME /
 ENTRYPOINT ["/usr/bin/shuffledns"]

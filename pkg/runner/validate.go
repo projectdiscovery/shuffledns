@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/projectdiscovery/gologger"
+	"github.com/projectdiscovery/gologger/formatter"
+	"github.com/projectdiscovery/gologger/levels"
 	"github.com/projectdiscovery/shuffledns/pkg/massdns"
 )
 
@@ -47,7 +49,7 @@ func (options *Options) validateOptions() error {
 	if options.SubdomainsList != "" || options.Stdin {
 		// If the optional domain name is not specified, wildcard filtering will be automatically disabled
 		if options.Domain == "" {
-			gologger.Labelf("Wildcard filtering will be automatically disabled as no domain name has been provided")
+			gologger.Print().Msgf("Wildcard filtering will be automatically disabled as no domain name has been provided")
 		}
 		return nil
 	}
@@ -79,12 +81,12 @@ func (options *Options) validateOptions() error {
 func (options *Options) configureOutput() {
 	// If the user desires verbose output, show verbose output
 	if options.Verbose {
-		gologger.MaxLevel = gologger.Verbose
+		gologger.DefaultLogger.SetMaxLevel(levels.LevelVerbose)
 	}
 	if options.NoColor {
-		gologger.UseColors = false
+		gologger.DefaultLogger.SetFormatter(formatter.NewCLI(true))
 	}
 	if options.Silent {
-		gologger.MaxLevel = gologger.Silent
+		gologger.DefaultLogger.SetMaxLevel(levels.LevelSilent)
 	}
 }

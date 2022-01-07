@@ -3,19 +3,25 @@ module github.com/projectdiscovery/shuffledns
 go 1.17
 
 require (
-	github.com/miekg/dns v1.1.29
-	github.com/projectdiscovery/gologger v1.0.0
+	github.com/Mzack9999/roundrobin v0.0.0-20211019094217-f3f5553da353
+	github.com/miekg/dns v1.1.45
+	github.com/projectdiscovery/gologger v1.1.4
 	github.com/remeh/sizedwaitgroup v1.0.0
-	github.com/rs/xid v1.2.1
-	github.com/stretchr/testify v1.5.1
+	github.com/rs/xid v1.3.0
+	github.com/stretchr/testify v1.7.0
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.0 // indirect
-	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/json-iterator/go v1.1.10 // indirect
+	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
-	golang.org/x/net v0.0.0-20190923162816-aa69164e4478 // indirect
+	golang.org/x/mod v0.4.2 // indirect
+	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
 	golang.org/x/sys v0.0.0-20210908233432-aa78b53d3365 // indirect
-	gopkg.in/yaml.v2 v2.2.2 // indirect
+	golang.org/x/tools v0.1.6-0.20210726203631-07bc1bf47fb2 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
