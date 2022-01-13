@@ -3,7 +3,7 @@ module github.com/projectdiscovery/shuffledns
 go 1.17
 
 require (
-	github.com/Mzack9999/roundrobin v0.0.0-20211019094217-f3f5553da353
+	github.com/Mzack9999/roundrobin v0.0.0-20220113175735-77e779fd07d8
 	github.com/miekg/dns v1.1.45
 	github.com/projectdiscovery/gologger v1.1.4
 	github.com/remeh/sizedwaitgroup v1.0.0
