@@ -1,5 +1,7 @@
 github.com/Mzack9999/roundrobin v0.0.0-20211019094217-f3f5553da353 h1:bT3DmkkW7jy6r4gzAz+VcTuDGf4msFjXonsvzsPxlio=
 github.com/Mzack9999/roundrobin v0.0.0-20211019094217-f3f5553da353/go.mod h1:jaPtvFne4154rQDj6lyDdPnvHc9II1X/3uXfJtjGKBQ=
+github.com/Mzack9999/roundrobin v0.0.0-20220113175735-77e779fd07d8 h1:OC2JcvJoumWvMGjJ8bmhvWAo5dobcdDCZ7WmOgiYEw4=
+github.com/Mzack9999/roundrobin v0.0.0-20220113175735-77e779fd07d8/go.mod h1:Rb4V/Q2dqsMgUxQ3Oj8lE/1cwowRrDDn5lsMisLiIcQ=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
