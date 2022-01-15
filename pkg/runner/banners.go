@@ -6,11 +6,11 @@ const banner = `
        __        ________        __       
   ___ / /  __ __/ _/ _/ /__  ___/ /__ ___
  (_-</ _ \/ // / _/ _/ / -_)/ _  / _ \(_-<
-/___/_//_/\_,_/_//_//_/\__/ \_,_/_//_/___/ v1.0.6
+/___/_//_/\_,_/_//_//_/\__/ \_,_/_//_/___/ v1.0.6-dev
 `
 
 // Version is the current version of naabu
-const Version = `v1.0.6`
+const Version = `v1.0.6-dev`
 
 // showBanner is used to show the banner to the user
 func showBanner() {
