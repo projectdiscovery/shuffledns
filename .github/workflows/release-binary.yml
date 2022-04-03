@@ -10,10 +10,21 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
+      - name: "Check out code"
+        uses: actions/checkout@v3
+        with: 
+          fetch-depth: 0
+
+      - name: "Set up Go"
+        uses: actions/setup-go@v2
+        with: 
+          go-version: 1.18
+
+      - name: Install Snapcraft
+        uses: samuelmeuli/action-snapcraft@v1
         with:
-          go-version: 1.17
+          snapcraft_token: ${{ secrets.snapcraft_token }}
+          
       - uses: goreleaser/goreleaser-action@v2
         with:
           args: "release --rm-dist"

@@ -32,3 +32,30 @@ archives:
 
 checksum:
   algorithm: sha256
+
+snapcrafts:
+  - id: shuffledns
+    replacements:
+      darwin: macOS
+    name: proxify
+    publish: false
+    summary: shuffleDNS is a wrapper around massdns written in go.
+    description: |
+      shuffleDNS is a wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains with wildcard handling and easy input-output support.
+    grade: stable
+    confinement: strict
+    license: MIT
+    base: core18
+    apps:
+      shuffledns:
+        command: shuffledns
+        plugs:
+          - home
+          - network
+          - removable-media
+          - dot-shuffledns
+    plugs:
+      dot-shuffledns:
+        interface: personal-files
+        write:
+          - $HOME/.config/shuffledns
