@@ -7,7 +7,7 @@ require (
 	github.com/miekg/dns v1.1.47
 	github.com/projectdiscovery/gologger v1.1.4
 	github.com/remeh/sizedwaitgroup v1.0.0
-	github.com/rs/xid v1.3.0
+	github.com/rs/xid v1.4.0
 	github.com/stretchr/testify v1.7.0
 )
 
