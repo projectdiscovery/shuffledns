@@ -8,7 +8,7 @@ require (
 	github.com/projectdiscovery/gologger v1.1.4
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.4.0
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 )
 
 require (
