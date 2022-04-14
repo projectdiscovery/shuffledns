@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Mzack9999/roundrobin/transport"
 	"github.com/miekg/dns"
+	"github.com/projectdiscovery/roundrobin/transport"
 	"github.com/rs/xid"
 )
 
