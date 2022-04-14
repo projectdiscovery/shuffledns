@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/projectdiscovery/fileutil"
 	"github.com/projectdiscovery/gologger"
 )
 
@@ -61,7 +62,7 @@ func ParseOptions() *Options {
 	flag.Parse()
 
 	// Check if stdin pipe was given
-	options.Stdin = hasStdin()
+	options.Stdin = fileutil.HasStdin()
 
 	// Read the inputs and configure the logging
 	options.configureOutput()
@@ -81,7 +82,7 @@ func ParseOptions() *Options {
 	}
 
 	// if all the flags are provided via cli we ignore stdin by draining it
-	if options.Domain != "" && options.ResolversFile != "" && options.Wordlist != "" {
+	if options.Stdin && (options.Domain != "" && options.ResolversFile != "" && options.Wordlist != "") {
 		// drain stdin
 		_, _ = io.Copy(io.Discard, os.Stdin)
 		options.Stdin = false
@@ -95,15 +96,4 @@ func ParseOptions() *Options {
 	}
 
 	return options
-}
-
-func hasStdin() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	if fi.Mode()&os.ModeNamedPipe == 0 {
-		return false
-	}
-	return true
 }
