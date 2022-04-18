@@ -32,6 +32,7 @@ type Options struct {
 	WildcardThreads    int    // WildcardsThreads controls the number of parallel host to check for wildcard
 	StrictWildcard     bool   // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
 	WildcardOutputFile string // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
+	MassDnsCmd         string // Supports massdns flags(example -i)
 
 	Stdin bool // Stdin specifies whether stdin input was given to the process
 }
@@ -58,6 +59,7 @@ func ParseOptions() *Options {
 	flag.BoolVar(&options.StrictWildcard, "strict-wildcard", false, "Perform wildcard check on all found subdomains")
 	flag.IntVar(&options.WildcardThreads, "wt", 25, "Number of concurrent wildcard checks")
 	flag.StringVar(&options.WildcardOutputFile, "wildcard-output-file", "", "Dump wildcard ips to output file")
+	flag.StringVar(&options.MassDnsCmd, "mcmd", "", "Supports massdns flags(example -i)")
 
 	flag.Parse()
 
