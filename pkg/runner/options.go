@@ -2,12 +2,12 @@ package runner
 
 import (
 	"bytes"
-	"flag"
 	"io"
 	"os"
 	"strings"
 
 	"github.com/projectdiscovery/fileutil"
+	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
 )
 
@@ -41,27 +41,47 @@ type Options struct {
 func ParseOptions() *Options {
 	options := &Options{}
 
-	flag.StringVar(&options.Directory, "directory", "", "Temporary directory for enumeration")
-	flag.StringVar(&options.Domain, "d", "", "Domain to find or resolve subdomains for")
-	flag.StringVar(&options.SubdomainsList, "list", "", "File containing list of subdomains to resolve")
-	flag.StringVar(&options.ResolversFile, "r", "", "File containing list of resolvers for enumeration")
-	flag.StringVar(&options.Wordlist, "w", "", "File containing words to bruteforce for domain")
-	flag.StringVar(&options.MassdnsPath, "massdns", "", "Path to the massdns binary")
-	flag.StringVar(&options.Output, "o", "", "File to write output to (optional)")
-	flag.BoolVar(&options.Json, "json", false, "Make output format as ndjson")
-	flag.BoolVar(&options.Silent, "silent", false, "Show only subdomains in output")
-	flag.BoolVar(&options.Version, "version", false, "Show version of shuffledns")
-	flag.IntVar(&options.Retries, "retries", 5, "Number of retries for dns enumeration")
-	flag.BoolVar(&options.Verbose, "v", false, "Show Verbose output")
-	flag.BoolVar(&options.NoColor, "nC", false, "Don't Use colors in output")
-	flag.IntVar(&options.Threads, "t", 10000, "Number of concurrent massdns resolves")
-	flag.StringVar(&options.MassdnsRaw, "raw-input", "", "Validate raw full massdns output")
-	flag.BoolVar(&options.StrictWildcard, "strict-wildcard", false, "Perform wildcard check on all found subdomains")
-	flag.IntVar(&options.WildcardThreads, "wt", 25, "Number of concurrent wildcard checks")
-	flag.StringVar(&options.WildcardOutputFile, "wildcard-output-file", "", "Dump wildcard ips to output file")
-	flag.StringVar(&options.MassDnsCmd, "mcmd", "", "Supports massdns flags(example -i)")
+	flagSet := goflags.NewFlagSet()
+	flagSet.SetDescription(`shuffleDNS is a wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains with wildcard handling and easy input-output support.`)
 
-	flag.Parse()
+	createGroup(flagSet, "input", "Input",
+		flagSet.StringVarP(&options.Domain, "domain", "d", "", "Domain to find or resolve subdomains for"),
+		flagSet.StringVarP(&options.SubdomainsList, "list", "l", "", "File containing list of subdomains to resolve"),
+		flagSet.StringVarP(&options.Wordlist, "wordlist", "w", "", "File containing words to bruteforce for domain"),
+		flagSet.StringVarP(&options.ResolversFile, "resolver", "r", "", "File containing list of resolvers for enumeration"),
+		flagSet.StringVarP(&options.MassdnsRaw, "raw-input", "ri", "", "Validate raw full massdns output"),
+	)
+
+	createGroup(flagSet, "rate-limit", "Rate-Limit",
+		flagSet.IntVar(&options.Threads, "t", 10000, "Number of concurrent massdns resolves"),
+	)
+
+	createGroup(flagSet, "output", "Output",
+		flagSet.StringVarP(&options.Output, "output", "o", "", "File to write output to (optional)"),
+		flagSet.BoolVarP(&options.Json, "json", "j", false, "Make output format as ndjson"),
+		flagSet.StringVarP(&options.WildcardOutputFile, "wildcard-output", "wo", "", "Dump wildcard ips to output file"),
+	)
+
+	createGroup(flagSet, "configs", "Configurations",
+		flagSet.StringVar(&options.MassdnsPath, "massdns", "", "Path to the massdns binary"),
+		flagSet.StringVar(&options.Directory, "directory", "", "Temporary directory for enumeration"),
+		flagSet.StringVar(&options.MassDnsCmd, "mcmd", "", "Supports massdns flags"),
+	)
+
+	createGroup(flagSet, "Optimizations", "Optimizations",
+		flagSet.IntVar(&options.Retries, "retries", 5, "Number of retries for dns enumeration"),
+		flagSet.BoolVarP(&options.StrictWildcard, "strict-wildcard", "sw", false, "Perform wildcard check on all found subdomains"),
+		flagSet.IntVar(&options.WildcardThreads, "wt", 25, "Number of concurrent wildcard checks"),
+	)
+
+	createGroup(flagSet, "debug", "Debug",
+		flagSet.BoolVar(&options.Silent, "silent", false, "Show only subdomains in output"),
+		flagSet.BoolVar(&options.Version, "version", false, "Show version of shuffledns"),
+		flagSet.BoolVar(&options.Verbose, "v", false, "Show Verbose output"),
+		flagSet.BoolVarP(&options.NoColor, "no-color", "nc", false, "Don't Use colors in output"),
+	)
+
+	_ = flagSet.Parse()
 
 	// Check if stdin pipe was given
 	options.Stdin = fileutil.HasStdin()
@@ -98,4 +118,11 @@ func ParseOptions() *Options {
 	}
 
 	return options
+}
+
+func createGroup(flagSet *goflags.FlagSet, groupName, description string, flags ...*goflags.FlagData) {
+	flagSet.SetGroup(groupName, description)
+	for _, currentFlag := range flags {
+		currentFlag.Group(groupName)
+	}
 }
