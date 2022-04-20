@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="static/shuffledns-logo.png" alt="shuffledns" width="200px"></a>
+  <img src="static/shuffledns-logo.png" alt="shuffledns" width="200px">
   <br>
 </h1>
 
@@ -26,14 +26,14 @@
 ---
 
 
-shuffleDNS is a wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains with wildcard handling and easy input-output support.
+`shuffleDNS` is a wrapper around `massdns`, written in go, that allows you to enumerate valid subdomains using active bruteforce, as well as resolve subdomains with wildcard handling and easy input-output support.
 
 Based on the work on `massdns` project by [@blechschmidt](https://github.com/blechschmidt).
 
  # Features
 
 <h1 align="left">
-  <img src="static/shuffledns-run.png" alt="shuffledns" width="700px"></a>
+  <img src="static/shuffledns-run.png" alt="shuffledns" width="700px">
   <br>
 </h1>
 
@@ -50,23 +50,38 @@ shuffledns -h
 ```
 This will display help for the tool. Here are all the switches it supports.
 
-| Flag          | Description                                             | Example                              |
-|---------------|---------------------------------------------------------|--------------------------------------|
-| d             | Domain to find or resolve subdomains for                | shuffledns -d hackerone.com          |
-| directory     | Temporary directory for enumeration                     | shuffledns -directory /hdd           |
-| r             | File containing resolvers for enumeration               | shuffledns -r resolvers.txt          |
-| nC            | Don't Use colors in output                              | shuffledns -nC                       |
-| o             | File to save output result (optional)                   | shuffledns -o hackerone.txt          |
-| list          | List of subdomains to process for                       | shuffledns -list bugcrowd.txt        |
-| massdns       | Massdns binary path                                     | shuffledns -massdns /usr/bin/massdns |
-| retries       | Number of retries for dns enumeration (default 5)       | shuffledns -retries 1                |
-| silent        | Show only subdomains in output                          | shuffledns -silent                   |
-| t             | Number of concurrent massdns resolves (default 10000)   | shuffledns -t 100                    |
-| v             | Show Verbose output                                     | shuffledns -v                        |
-| version       | Show version of shuffledns                              | shuffledns -version                  |
-| w             | File containing words to bruteforce for domain          | shuffledns -w words.txt              |
-| wt            | Number of concurrent wildcard checks (default 25)       | shuffledns -wt 100                   |
-| raw-input     | File containing existing massdns output                 | shuffledns -massdns-file output.txt  |
+```yaml
+INPUT:
+   -d, -domain string      Domain to find or resolve subdomains for
+   -l, -list string        File containing list of subdomains to resolve
+   -w, -wordlist string    File containing words to bruteforce for domain
+   -r, -resolver string    File containing list of resolvers for enumeration
+   -ri, -raw-input string  Validate raw full massdns output
+
+RATE-LIMIT:
+   -t int  Number of concurrent massdns resolves (default 10000)
+
+OUTPUT:
+   -o, -output string            File to write output to (optional)
+   -j, -json                     Make output format as ndjson
+   -wo, -wildcard-output string  Dump wildcard ips to output file
+
+CONFIGURATIONS:
+   -massdns string    Path to the massdns binary
+   -directory string  Temporary directory for enumeration
+   -mcmd string       Supports massdns commands (example "-q -i 10")
+
+OPTIMIZATIONS:
+   -retries int           Number of retries for dns enumeration (default 5)
+   -sw, -strict-wildcard  Perform wildcard check on all found subdomains
+   -wt int                Number of concurrent wildcard checks (default 25)
+
+DEBUG:
+   -silent         Show only subdomains in output
+   -version        Show version of shuffledns
+   -v              Show Verbose output
+   -nc, -no-color  Don't Use colors in output
+```
 
 <table>
 <tr>
@@ -74,7 +89,7 @@ This will display help for the tool. Here are all the switches it supports.
 
 ## Prerequisite
 
-shuffledns requires massdns to be installed in order to perform its operations. You can see the install instructions at [massdns project](https://github.com/blechschmidt/massdns#compilation). If you place the binary in `/usr/bin/massdns` or `/usr/local/bin/massdns`, the tool will auto-detect the presence of the binary and use it. On windows, you need to supply the path to the binary for the tool to work.
+`shuffledns` requires `massdns` to be installed in order to perform its operations. You can see the installation instructions at [massdns project](https://github.com/blechschmidt/massdns#compilation). If you place the binary in `/usr/bin/massdns` or `/usr/local/bin/massdns`, the tool will auto-detect the presence of the binary and use it. On Windows, you need to supply the path to the binary for the tool to work.
 
 The tool also needs a list of valid resolvers. The [dnsvalidator](https://github.com/vortexau/dnsvalidator) project can be used to generate these lists. You also need to provide wordlist, you can use a custom wordlist or use the [commonspeak2-wordlist](https://s3.amazonaws.com/assetnote-wordlists/data/manual/best-dns-wordlist.txt).
 
@@ -84,7 +99,7 @@ The tool also needs a list of valid resolvers. The [dnsvalidator](https://github
 
 ## Installation Instructions
 
-shuffledns requires `go1.17+` to install successfully. Run the following command to get the repo - 
+`shuffledns` requires `go1.17+` to install successfully. Run the following command to install the latest version: 
 
 ```bash
 go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
@@ -92,11 +107,11 @@ go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
 
 ## Running shuffledns
 
-**shuffledns** supports two types of operations.
+`shuffledns` supports two types of operations:
 
-<ins>**Subdomain resolving** </ins>
+<ins>**Subdomain resolving**</ins>
 
-To resolve a list of subdomains, you can pass the list of subdomains via the `list` option.
+To resolve a list of subdomains, you can pass the list of subdomains via the `-list` option.
 
 ```bash
 shuffledns -d example.com -list example-subdomains.txt -r resolvers.txt
@@ -110,11 +125,11 @@ You can also pass the list of subdomains at standard input (STDIN). This allows 
 subfinder -d example.com | shuffledns -d example.com -r resolvers.txt
 ```
 
-This uses the subdomains found passively by `subfinder` and resolves them with shuffledns returning only the unique and valid subdomains.
+This uses the subdomains found passively by `subfinder` and resolves them with `shuffledns` returning only the unique and valid subdomains.
 
-<ins>**Subdomain Bruteforcing** </ins>
+<ins>**Subdomain Bruteforcing**</ins>
 
-shuffledns also supports bruteforce of a target with a given wordlist. You can use the `w` flag to pass a wordlist which will be used to generate permutations that will be resolved using massdns.
+`shuffledns` also supports bruteforce of a target with a given wordlist. You can use the `w` flag to pass a wordlist which will be used to generate permutations that will be resolved using massdns.
 
 ```bash
 shuffledns -d hackerone.com -w wordlist.txt -r resolvers.txt
@@ -134,7 +149,7 @@ echo hackerone.com | shuffledns -w wordlist.txt -r resolvers.txt
 
 ## Handling Wildcards
 
-A special feature of shuffleDNS is its ability to handle multi-level DNS based wildcards and do it so with very less number of DNS requests. Sometimes all the subdomains will resolve which will lead to lots of garbage in the results. The way shuffleDNS handles this is it will keep track of how many subdomains point to an IP and if the count of the Subdomains increase beyond a certain small threshold, it will check for wildcard on all the levels of the hosts for that IP iteratively.
+A special feature of `shuffleDNS` is its ability to handle multi-level DNS based wildcards, and do it so with a very reduced number of DNS requests. Sometimes all the subdomains would resolve, leading to lots of garbage in the results. The way `shuffleDNS` handles this is by keeping track of how many subdomains point to an IP, and if the number of subdomains increase beyond a certain small threshold, it checks for wildcard on all the levels of the hosts for that IP iteratively.
 
 </td>
 </tr>
@@ -142,9 +157,9 @@ A special feature of shuffleDNS is its ability to handle multi-level DNS based w
 
 ### Notes
 
-- Wildcard filter feature works with domain (-d) input only.
+- Wildcard filter feature works with domain (`-d`) input only.
 - Resolving or Brute-forcing only one operation can be done at a time. 
 
 ### License
 
-shuffledns is distributed under [MIT License](https://github.com/projectdiscovery/shuffledns/blob/master/LICENSE.md)
+`shuffledns` is distributed under [GPL v3 License](https://github.com/projectdiscovery/shuffledns/blob/master/LICENSE.md)
