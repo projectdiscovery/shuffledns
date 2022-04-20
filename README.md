@@ -67,8 +67,9 @@ OUTPUT:
    -wo, -wildcard-output string  Dump wildcard ips to output file
 
 CONFIGURATIONS:
-   -massdns string    Path to the massdns binary
-   -directory string  Temporary directory for enumeration
+   -m, -massdns string         Path to the massdns binary
+   -mcmd, -massdns-cmd string  Optional massdns commands to run (example '-q -i 10')
+   -directory string           Temporary directory for enumeration
 
 OPTIMIZATIONS:
    -retries int           Number of retries for dns enumeration (default 5)

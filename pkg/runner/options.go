@@ -32,6 +32,7 @@ type Options struct {
 	WildcardThreads    int    // WildcardsThreads controls the number of parallel host to check for wildcard
 	StrictWildcard     bool   // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
 	WildcardOutputFile string // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
+	MassDnsCmd         string // Supports massdns flags(example -i)
 
 	Stdin bool // Stdin specifies whether stdin input was given to the process
 }
@@ -62,7 +63,8 @@ func ParseOptions() *Options {
 	)
 
 	createGroup(flagSet, "configs", "Configurations",
-		flagSet.StringVar(&options.MassdnsPath, "massdns", "", "Path to the massdns binary"),
+		flagSet.StringVarP(&options.MassdnsPath, "massdns", "m", "", "Path to the massdns binary"),
+		flagSet.StringVarP(&options.MassDnsCmd, "massdns-cmd", "mcmd", "", "Optional massdns commands to run (example '-i 10')"),
 		flagSet.StringVar(&options.Directory, "directory", "", "Temporary directory for enumeration"),
 	)
 
