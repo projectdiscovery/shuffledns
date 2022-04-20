@@ -50,23 +50,37 @@ shuffledns -h
 ```
 This will display help for the tool. Here are all the switches it supports.
 
-| Flag         | Description                                           | Example                                |
-|--------------|-------------------------------------------------------|----------------------------------------|
-| `-d`         | Domain to find or resolve subdomains for              | `shuffledns -d hackerone.com`          |
-| `-directory` | Temporary directory for enumeration                   | `shuffledns -directory /hdd`           |
-| `-r`         | File containing resolvers for enumeration             | `shuffledns -r resolvers.txt`          |
-| `-nC`        | Don't Use colors in output                            | `shuffledns -nC`                       |
-| `-o`         | File to save output result (optional)                 | `shuffledns -o hackerone.txt`          |
-| `-list`      | List of subdomains to process for                     | `shuffledns -list bugcrowd.txt`        |
-| `-massdns`   | Massdns binary path                                   | `shuffledns -massdns /usr/bin/massdns` |
-| `-retries`   | Number of retries for dns enumeration (default 5)     | `shuffledns -retries 1`                |
-| `-silent`    | Show only subdomains in output                        | `shuffledns -silent`                   |
-| `-t`         | Number of concurrent massdns resolves (default 10000) | `shuffledns -t 100`                    |
-| `-v`         | Show Verbose output                                   | `shuffledns -v`                        |
-| `-version`   | Show version of shuffledns                            | `shuffledns -version`                  |
-| `-w`         | File containing words to bruteforce for domain        | `shuffledns -w words.txt`              |
-| `-wt`        | Number of concurrent wildcard checks (default 25)     | `shuffledns -wt 100`                   |
-| `-raw-input` | File containing existing massdns output               | `shuffledns -massdns-file output.txt`  |
+```yaml
+INPUT:
+   -d, -domain string      Domain to find or resolve subdomains for
+   -l, -list string        File containing list of subdomains to resolve
+   -w, -wordlist string    File containing words to bruteforce for domain
+   -r, -resolver string    File containing list of resolvers for enumeration
+   -ri, -raw-input string  Validate raw full massdns output
+
+RATE-LIMIT:
+   -t int  Number of concurrent massdns resolves (default 10000)
+
+OUTPUT:
+   -o, -output string            File to write output to (optional)
+   -j, -json                     Make output format as ndjson
+   -wo, -wildcard-output string  Dump wildcard ips to output file
+
+CONFIGURATIONS:
+   -massdns string    Path to the massdns binary
+   -directory string  Temporary directory for enumeration
+
+OPTIMIZATIONS:
+   -retries int           Number of retries for dns enumeration (default 5)
+   -sw, -strict-wildcard  Perform wildcard check on all found subdomains
+   -wt int                Number of concurrent wildcard checks (default 25)
+
+DEBUG:
+   -silent         Show only subdomains in output
+   -version        Show version of shuffledns
+   -v              Show Verbose output
+   -nc, -no-color  Don't Use colors in output
+```
 
 <table>
 <tr>
