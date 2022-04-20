@@ -63,9 +63,9 @@ func ParseOptions() *Options {
 	)
 
 	createGroup(flagSet, "configs", "Configurations",
-		flagSet.StringVar(&options.MassdnsPath, "massdns", "", "Path to the massdns binary"),
+		flagSet.StringVarP(&options.MassdnsPath, "massdns", "m", "", "Path to the massdns binary"),
+		flagSet.StringVarP(&options.MassDnsCmd, "massdns-cmd", "mcmd", "", "Optional massdns commands to run (example '-i 10')"),
 		flagSet.StringVar(&options.Directory, "directory", "", "Temporary directory for enumeration"),
-		flagSet.StringVar(&options.MassDnsCmd, "mcmd", "", "Supports massdns flags"),
 	)
 
 	createGroup(flagSet, "Optimizations", "Optimizations",
