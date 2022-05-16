@@ -3,8 +3,9 @@ module github.com/projectdiscovery/shuffledns
 go 1.17
 
 require (
-	github.com/miekg/dns v1.1.48
+	github.com/miekg/dns v1.1.49
 	github.com/projectdiscovery/fileutil v0.0.0-20220215113056-ba188a0c8abc
+	github.com/projectdiscovery/goflags v0.0.7
 	github.com/projectdiscovery/gologger v1.1.4
 	github.com/projectdiscovery/roundrobin v0.0.0-20220414090253-f09184199ebd
 	github.com/remeh/sizedwaitgroup v1.0.0
@@ -23,7 +24,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/projectdiscovery/goflags v0.0.7 // indirect
 	github.com/projectdiscovery/stringsutil v0.0.0-20210804142656-fd3c28dbaafe // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
