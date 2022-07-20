@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/projectdiscovery/gologger"
-	"github.com/projectdiscovery/shuffledns/internal/store"
-	"github.com/projectdiscovery/shuffledns/pkg/parser"
+	"github.com/mohammadanaraki/shuffledns/internal/store"
+	"github.com/mohammadanaraki/shuffledns/pkg/parser"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/rs/xid"
 )

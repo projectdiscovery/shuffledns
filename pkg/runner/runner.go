@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/projectdiscovery/gologger"
-	"github.com/projectdiscovery/shuffledns/pkg/massdns"
+	"github.com/mohammadanaraki/shuffledns/pkg/massdns"
 	"github.com/rs/xid"
 )
 
