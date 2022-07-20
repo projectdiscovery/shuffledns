@@ -44,6 +44,8 @@ type Config struct {
 	StrictWildcard bool
 	// WildcardOutputFile is the file where the list of wildcards is dumped
 	WildcardOutputFile string
+	// MassDnsCmd supports massdns flags
+	MassDnsCmd string
 }
 
 // excellentResolvers contains some resolvers used in dns verification step
