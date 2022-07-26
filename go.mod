@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/miekg/dns v1.1.50
 	github.com/projectdiscovery/fileutil v0.0.0-20220215113056-ba188a0c8abc
-	github.com/projectdiscovery/goflags v0.0.7
+	github.com/projectdiscovery/goflags v0.0.9
 	github.com/projectdiscovery/gologger v1.1.4
 	github.com/projectdiscovery/roundrobin v0.0.0-20220414090253-f09184199ebd
 	github.com/remeh/sizedwaitgroup v1.0.0
@@ -30,6 +30,5 @@ require (
 	golang.org/x/sys v0.0.0-20210908233432-aa78b53d3365 // indirect
 	golang.org/x/tools v0.1.6-0.20210726203631-07bc1bf47fb2 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
