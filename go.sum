@@ -37,8 +37,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/projectdiscovery/fileutil v0.0.0-20220705195237-01becc2a8963 h1:4o97N9ftX1J3iKlIRVMPVOVZs4qbCczJvoFF2WA40t4=
 github.com/projectdiscovery/fileutil v0.0.0-20220705195237-01becc2a8963/go.mod h1:DaY7wmLPMleyHDCD/14YApPCDtrARY4J8Eny2ZGsG/g=
-github.com/projectdiscovery/goflags v0.1.0 h1:Z7sUVK8wgH6aGJWinmGQEtsn+GNf/0RQ+z1wQcpCeeA=
-github.com/projectdiscovery/goflags v0.1.0/go.mod h1:/YBPA+1igSkQbwD7a91o0HUIwMDlsmQDRZL2oSYSyEQ=
+github.com/projectdiscovery/goflags v0.1.1 h1:AEtT14D9OC10HWyZwDQaSLjuK8ZKoBrSYlsLItvMKZI=
+github.com/projectdiscovery/goflags v0.1.1/go.mod h1:/YBPA+1igSkQbwD7a91o0HUIwMDlsmQDRZL2oSYSyEQ=
 github.com/projectdiscovery/gologger v1.1.4 h1:qWxGUq7ukHWT849uGPkagPKF3yBPYAsTtMKunQ8O2VI=
 github.com/projectdiscovery/gologger v1.1.4/go.mod h1:Bhb6Bdx2PV1nMaFLoXNBmHIU85iROS9y1tBuv7T5pMY=
 github.com/projectdiscovery/roundrobin v0.0.0-20220414090253-f09184199ebd h1:AbJyHR3mMEaO3TxR9dC8PMvWB8h9uYhbIAZYsvwlaUU=
