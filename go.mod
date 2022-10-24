@@ -10,7 +10,7 @@ require (
 	github.com/projectdiscovery/roundrobin v0.0.0-20220414090253-f09184199ebd
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.4.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 )
 
 require (
