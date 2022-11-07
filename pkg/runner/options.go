@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/projectdiscovery/fileutil"
 	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
+	fileutil "github.com/projectdiscovery/utils/file"
 )
 
 // Options contains the configuration options for tuning
