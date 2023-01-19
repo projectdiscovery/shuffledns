@@ -91,7 +91,7 @@ DEBUG:
 
 `shuffledns` requires `massdns` to be installed in order to perform its operations. You can see the installation instructions at [massdns project](https://github.com/blechschmidt/massdns#compilation). If you place the binary in `/usr/bin/massdns` or `/usr/local/bin/massdns`, the tool will auto-detect the presence of the binary and use it. On Windows, you need to supply the path to the binary for the tool to work.
 
-The tool also needs a list of valid resolvers. The [dnsvalidator](https://github.com/vortexau/dnsvalidator) project can be used to generate these lists. You also need to provide wordlist, you can use a custom wordlist or use the [commonspeak2-wordlist](https://s3.amazonaws.com/assetnote-wordlists/data/manual/best-dns-wordlist.txt).
+The tool also needs a list of valid resolvers. The [dnsvalidator](https://github.com/vortexau/dnsvalidator) project can be used to generate these lists. You also need to provide wordlist, you can use a custom wordlist or use the [commonspeak2-wordlist](https://wordlists-cdn.assetnote.io/data/manual/best-dns-wordlist.txt).
 
 </td>
 </tr>
