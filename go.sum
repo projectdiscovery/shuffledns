@@ -49,8 +49,8 @@ github.com/projectdiscovery/goflags v0.1.1 h1:AEtT14D9OC10HWyZwDQaSLjuK8ZKoBrSYl
 github.com/projectdiscovery/goflags v0.1.1/go.mod h1:/YBPA+1igSkQbwD7a91o0HUIwMDlsmQDRZL2oSYSyEQ=
 github.com/projectdiscovery/gologger v1.1.4 h1:qWxGUq7ukHWT849uGPkagPKF3yBPYAsTtMKunQ8O2VI=
 github.com/projectdiscovery/gologger v1.1.4/go.mod h1:Bhb6Bdx2PV1nMaFLoXNBmHIU85iROS9y1tBuv7T5pMY=
-github.com/projectdiscovery/roundrobin v0.0.0-20220414090253-f09184199ebd h1:AbJyHR3mMEaO3TxR9dC8PMvWB8h9uYhbIAZYsvwlaUU=
-github.com/projectdiscovery/roundrobin v0.0.0-20220414090253-f09184199ebd/go.mod h1:nfHR2GUULFHe1bWZaA2y1m9CCvg8MdgJ8xI6a+wMUvU=
+github.com/projectdiscovery/roundrobin v0.0.6 h1:zoJAFRgP9XK7B+iKSjR+djRAuDYxnc57+Fx+qpoPvds=
+github.com/projectdiscovery/roundrobin v0.0.6/go.mod h1:vTxcWqNLyMH6VE2Q/hsNNvDHFLiIzHozC1rLLT/vocQ=
 github.com/projectdiscovery/stringsutil v0.0.0-20220422150559-b54fb5dc6833/go.mod h1:oTRc18WBv9t6BpaN9XBY+QmG28PUpsyDzRht56Qf49I=
 github.com/projectdiscovery/stringsutil v0.0.1/go.mod h1:TDi2LEqR3OML0BxGoMbbfAHSk5AdfHX762Oc302sgmM=
 github.com/projectdiscovery/stringsutil v0.0.2 h1:uzmw3IVLJSMW1kEg8eCStG/cGbYYZAja8BH3LqqJXMA=

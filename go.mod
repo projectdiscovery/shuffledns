@@ -7,7 +7,7 @@ require (
 	github.com/projectdiscovery/fileutil v0.0.0-20220705195237-01becc2a8963 // indirect
 	github.com/projectdiscovery/goflags v0.1.1
 	github.com/projectdiscovery/gologger v1.1.4
-	github.com/projectdiscovery/roundrobin v0.0.0-20220414090253-f09184199ebd
+	github.com/projectdiscovery/roundrobin v0.0.6
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.4.0
 	github.com/stretchr/testify v1.8.1
