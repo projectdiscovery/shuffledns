@@ -9,6 +9,7 @@ import (
 	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
 	fileutil "github.com/projectdiscovery/utils/file"
+	updateutils "github.com/projectdiscovery/utils/update"
 )
 
 // Options contains the configuration options for tuning
@@ -33,8 +34,8 @@ type Options struct {
 	StrictWildcard     bool   // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
 	WildcardOutputFile string // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
 	MassDnsCmd         string // Supports massdns flags(example -i)
-
-	Stdin bool // Stdin specifies whether stdin input was given to the process
+	Stdin              bool   // Stdin specifies whether stdin input was given to the process
+	DisableUpdateCheck bool   // DisableUpdateCheck disable automatic update check
 }
 
 // ParseOptions parses the command line flags provided by a user
@@ -54,6 +55,11 @@ func ParseOptions() *Options {
 
 	createGroup(flagSet, "rate-limit", "Rate-Limit",
 		flagSet.IntVar(&options.Threads, "t", 10000, "Number of concurrent massdns resolves"),
+	)
+
+	flagSet.CreateGroup("update", "Update",
+		flagSet.CallbackVarP(GetUpdateCallback(), "update", "up", "update shuffledns to latest version"),
+		flagSet.BoolVarP(&options.DisableUpdateCheck, "disable-update-check", "duc", false, "disable automatic shuffledns update check"),
 	)
 
 	createGroup(flagSet, "output", "Output",
@@ -93,9 +99,21 @@ func ParseOptions() *Options {
 	showBanner()
 
 	if options.Version {
-		gologger.Info().Msgf("Current Version: %s\n", Version)
+		gologger.Info().Msgf("Current Version: %s\n", version)
 		os.Exit(0)
 	}
+
+	if !options.DisableUpdateCheck {
+		latestVersion, err := updateutils.GetVersionCheckCallback("shuffledns")()
+		if err != nil {
+			if options.Verbose {
+				gologger.Error().Msgf("shuffledns version check failed: %v", err.Error())
+			}
+		} else {
+			gologger.Info().Msgf("Current shuffledns version %v %v", version, updateutils.GetVersionDescription(version, latestVersion))
+		}
+	}
+
 	// Validate the options passed by the user and if any
 	// invalid options have been used, exit.
 	err := options.validateOptions()

@@ -61,6 +61,10 @@ INPUT:
 RATE-LIMIT:
    -t int  Number of concurrent massdns resolves (default 10000)
 
+UPDATE:
+   -up, -update                 update shuffledns to latest version
+   -duc, -disable-update-check  disable automatic shuffledns update check
+
 OUTPUT:
    -o, -output string            File to write output to (optional)
    -j, -json                     Make output format as ndjson
