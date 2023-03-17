@@ -51,6 +51,12 @@ shuffledns -h
 This will display help for the tool. Here are all the switches it supports.
 
 ```yaml
+shuffleDNS is a wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains with wildcard handling and easy input-output support.
+
+Usage:
+  ./shuffledns [flags]
+
+Flags:
 INPUT:
    -d, -domain string      Domain to find or resolve subdomains for
    -l, -list string        File containing list of subdomains to resolve
@@ -72,7 +78,7 @@ OUTPUT:
 
 CONFIGURATIONS:
    -m, -massdns string         Path to the massdns binary
-   -mcmd, -massdns-cmd string  Optional massdns commands to run (example '-q -i 10')
+   -mcmd, -massdns-cmd string  Optional massdns commands to run (example '-i 10')
    -directory string           Temporary directory for enumeration
 
 OPTIMIZATIONS:
@@ -103,7 +109,7 @@ The tool also needs a list of valid resolvers. The [dnsvalidator](https://github
 
 ## Installation Instructions
 
-`shuffledns` requires `go1.17+` to install successfully. Run the following command to install the latest version: 
+`shuffledns` requires `go1.19+` to install successfully. Run the following command to install the latest version: 
 
 ```bash
 go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
