@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,7 +38,7 @@ func New(options *Options) (*Runner, error) {
 
 	// Create a temporary directory that will be removed at the end
 	// of enumeration process.
-	dir, err := ioutil.TempDir(options.Directory, "shuffledns")
+	dir, err := os.MkdirTemp(options.Directory, "shuffledns-*")
 	if err != nil {
 		return nil, err
 	}
