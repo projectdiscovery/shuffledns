@@ -3,7 +3,7 @@ module github.com/projectdiscovery/shuffledns
 go 1.19
 
 require (
-	github.com/miekg/dns v1.1.52
+	github.com/miekg/dns v1.1.53
 	github.com/projectdiscovery/goflags v0.1.8
 	github.com/projectdiscovery/gologger v1.1.8
 	github.com/projectdiscovery/roundrobin v0.0.6
