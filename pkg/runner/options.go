@@ -104,7 +104,7 @@ func ParseOptions() *Options {
 	}
 
 	if !options.DisableUpdateCheck {
-		latestVersion, err := updateutils.GetVersionCheckCallback("shuffledns")()
+		latestVersion, err := updateutils.GetToolVersionCallback("shuffledns", version)()
 		if err != nil {
 			if options.Verbose {
 				gologger.Error().Msgf("shuffledns version check failed: %v", err.Error())
