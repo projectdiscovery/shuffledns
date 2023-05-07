@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,7 +38,7 @@ func New(options *Options) (*Runner, error) {
 
 	// Create a temporary directory that will be removed at the end
 	// of enumeration process.
-	dir, err := ioutil.TempDir(options.Directory, "shuffledns")
+	dir, err := os.MkdirTemp(options.Directory, "shuffledns-*")
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +149,7 @@ func (r *Runner) processSubdomains() {
 	var resolveFile string
 
 	// If there is stdin, write the resolution list to the file
-	if r.options.Stdin {
+	if r.options.Stdin && r.options.SubdomainsList == "" {
 		resolveFile = filepath.Join(r.tempDir, xid.New().String())
 		file, err := os.Create(resolveFile)
 		if err != nil {
