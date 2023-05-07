@@ -172,4 +172,4 @@ A special feature of `shuffleDNS` is its ability to handle multi-level DNS based
 
 ### License
 
-`shuffledns` is distributed under [GPL v3 License](https://github.com/projectdiscovery/shuffledns/blob/master/LICENSE.md)
+`shuffledns` is distributed under [GPL v3 License](https://github.com/projectdiscovery/shuffledns/blob/main/LICENSE.md)
