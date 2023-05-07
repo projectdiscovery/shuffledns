@@ -149,7 +149,7 @@ func (r *Runner) processSubdomains() {
 	var resolveFile string
 
 	// If there is stdin, write the resolution list to the file
-	if r.options.Stdin {
+	if r.options.Stdin && r.options.SubdomainsList == "" {
 		resolveFile = filepath.Join(r.tempDir, xid.New().String())
 		file, err := os.Create(resolveFile)
 		if err != nil {
