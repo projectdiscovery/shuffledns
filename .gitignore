@@ -1,2 +1,3 @@
 cmd/shuffledns/shuffledns*
 cmd/shuffledns/build.sh
+dist/
