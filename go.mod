@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/miekg/dns v1.1.54
 	github.com/projectdiscovery/goflags v0.1.8
-	github.com/projectdiscovery/gologger v1.1.9
+	github.com/projectdiscovery/gologger v1.1.10
 	github.com/projectdiscovery/roundrobin v0.0.6
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.5.0
