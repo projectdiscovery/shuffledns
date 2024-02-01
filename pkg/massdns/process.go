@@ -16,6 +16,7 @@ import (
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/shuffledns/internal/store"
 	"github.com/projectdiscovery/shuffledns/pkg/parser"
+	folderutil "github.com/projectdiscovery/utils/folder"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/rs/xid"
 )
@@ -42,7 +43,8 @@ func (c *Client) Process() error {
 	defer shstore.Close()
 
 	// Set the correct target file
-	massDNSOutput := filepath.Join(c.config.TempDir, xid.New().String())
+	tmpDir := c.config.TempDir
+	massDNSOutput := filepath.Join(tmpDir, xid.New().String())
 	if c.config.MassdnsRaw != "" {
 		massDNSOutput = c.config.MassdnsRaw
 	}
@@ -59,7 +61,7 @@ func (c *Client) Process() error {
 
 	gologger.Info().Msgf("Started parsing massdns output\n")
 
-	err = c.parseMassDNSOutput(massDNSOutput, shstore)
+	err = c.parseMassDNSOutputDir(tmpDir, shstore)
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
 	}
@@ -105,8 +107,8 @@ func (c *Client) runMassDNS(output string, store *store.Store) error {
 	return nil
 }
 
-func (c *Client) parseMassDNSOutput(output string, store *store.Store) error {
-	massdnsOutput, err := os.Open(output)
+func (c *Client) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
+	massdnsOutput, err := os.Open(tmpFile)
 	if err != nil {
 		return fmt.Errorf("could not open massdns output file: %w", err)
 	}
@@ -133,6 +135,22 @@ func (c *Client) parseMassDNSOutput(output string, store *store.Store) error {
 
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Client) parseMassDNSOutputDir(tmpDir string, store *store.Store) error {
+	tmpFiles, err := folderutil.GetFiles(tmpDir)
+	if err != nil {
+		return fmt.Errorf("could not open massdns output directory: %w", err)
+	}
+
+	for _, tmpFile := range tmpFiles {
+		err = c.parseMassDNSOutputFile(tmpFile, store)
+		if err != nil {
+			return fmt.Errorf("could not parse massdns output: %w", err)
+		}
 	}
 
 	return nil
