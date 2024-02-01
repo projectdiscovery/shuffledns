@@ -52,7 +52,7 @@ func (c *Client) Process() error {
 	// Check if we need to run massdns
 	if c.config.MassdnsRaw == "" {
 		// Create a temporary file for the massdns output
-		gologger.Info().Msgf("Creating temporary massdns output file: %s\n", massDNSOutput)
+		gologger.Info().Msgf("Creating temporary massdns output directory: %s\n", tmpDir)
 		err = c.runMassDNS(massDNSOutput, shstore)
 		if err != nil {
 			return fmt.Errorf("could not execute massdns: %w", err)
