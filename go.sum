@@ -114,8 +114,8 @@ github.com/projectdiscovery/gologger v1.1.12 h1:uX/QkQdip4PubJjjG0+uk5DtyAi1ANPJ
 github.com/projectdiscovery/gologger v1.1.12/go.mod h1:DI8nywPLERS5mo8QEA9E7gd5HZ3Je14SjJBH3F5/kLw=
 github.com/projectdiscovery/roundrobin v0.0.6 h1:zoJAFRgP9XK7B+iKSjR+djRAuDYxnc57+Fx+qpoPvds=
 github.com/projectdiscovery/roundrobin v0.0.6/go.mod h1:vTxcWqNLyMH6VE2Q/hsNNvDHFLiIzHozC1rLLT/vocQ=
-github.com/projectdiscovery/utils v0.0.78 h1:PUfOlq0UecZfEuiNBsjJ69PbFuzft3IuWjWvW17JX6Q=
-github.com/projectdiscovery/utils v0.0.78/go.mod h1:PMlp/oEqKK3Fr+XIBiRnQG+G6sQJPp9WNk2k+TdgvDE=
+github.com/projectdiscovery/utils v0.0.79 h1:ptO3Qo2e24SK5w5yvDk2whsvSEIk7gSX+RNhBQPRKqc=
+github.com/projectdiscovery/utils v0.0.79/go.mod h1:tBFlI+1warN7y7hKpFf6pqqOszvufENofy9Md0qlZQo=
 github.com/remeh/sizedwaitgroup v1.0.0 h1:VNGGFwNo/R5+MJBf6yrsr110p0m4/OX4S3DCy7Kyl5E=
 github.com/remeh/sizedwaitgroup v1.0.0/go.mod h1:3j2R4OIe/SeS6YDhICBy22RWjJC5eNCJ1V+9+NVNYlo=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
