@@ -227,6 +227,8 @@ func (c *Client) writeOutput(store *store.Store) error {
 
 	uniqueMap := make(map[string]struct{})
 
+	// write count of resolved hosts
+	resolvedCount := 0
 	for _, record := range store.IP {
 		for hostname := range record.Hostnames {
 			// Skip if we already printed this subdomain once
@@ -255,8 +257,10 @@ func (c *Client) writeOutput(store *store.Store) error {
 			}
 			gologger.Silent().Msgf("%s", data)
 			buffer.Reset()
+			resolvedCount++
 		}
 	}
+	gologger.Info().Msgf("Total resolved: %d\n", resolvedCount)
 
 	// Close the files and return
 	if output != nil {
