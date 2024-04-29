@@ -17,7 +17,7 @@ func IsBlankFile(file string) (bool, error) {
 
 // DumpWildcardsToFile dumps the wildcard IPs list to a file.
 func (c *Client) DumpWildcardsToFile(filename string) error {
-	if len(c.wildcardIPMap) == 0 {
+	if c.wildcardIPMap.IsEmpty() {
 		return errors.New("no wildcards")
 	}
 
@@ -28,11 +28,10 @@ func (c *Client) DumpWildcardsToFile(filename string) error {
 	defer f.Close()
 
 	bw := bufio.NewWriter(f)
-	for k := range c.wildcardIPMap {
-		if _, err := bw.WriteString(k + "\n"); err != nil {
-			return err // Handle errors immediately when writing to buffer
-		}
-	}
+	c.wildcardIPMap.Iterate(func(k string, v struct{}) error {
+		_, err := bw.WriteString(k + "\n")
+		return err
+	})
 
 	return bw.Flush() // Explicitly flush at the end and handle the error if any
 }

@@ -1,18 +1,16 @@
 package massdns
 
 import (
-	"sync"
-
-	"github.com/projectdiscovery/shuffledns/internal/store"
+	"github.com/projectdiscovery/shuffledns/pkg/store"
 	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
+	mapsutil "github.com/projectdiscovery/utils/maps"
 )
 
 // Client is a client for running massdns on a target
 type Client struct {
 	config Config
 
-	wildcardIPMap   map[string]struct{}
-	wildcardIPMutex *sync.RWMutex
+	wildcardIPMap *mapsutil.SyncLockMap[string, struct{}]
 
 	wildcardResolver *wildcards.Resolver
 }
@@ -74,8 +72,7 @@ func New(config Config) (*Client, error) {
 	return &Client{
 		config: config,
 
-		wildcardIPMap:    make(map[string]struct{}),
-		wildcardIPMutex:  &sync.RWMutex{},
+		wildcardIPMap:    mapsutil.NewSyncLockMap[string, struct{}](),
 		wildcardResolver: resolver,
 	}, nil
 }

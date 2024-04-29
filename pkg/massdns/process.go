@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/projectdiscovery/gologger"
-	"github.com/projectdiscovery/shuffledns/internal/store"
 	"github.com/projectdiscovery/shuffledns/pkg/parser"
+	"github.com/projectdiscovery/shuffledns/pkg/store"
 	folderutil "github.com/projectdiscovery/utils/folder"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/rs/xid"
@@ -162,12 +162,9 @@ func (c *Client) filterWildcards(st *store.Store) error {
 
 	for _, record := range st.IP {
 		// We've stumbled upon a wildcard, just ignore it.
-		c.wildcardIPMutex.Lock()
-		if _, ok := c.wildcardIPMap[record.IP]; ok {
-			c.wildcardIPMutex.Unlock()
+		if c.wildcardIPMap.Has(record.IP) {
 			continue
 		}
-		c.wildcardIPMutex.Unlock()
 
 		// Perform wildcard detection on the ip, if an IP is found in the wildcard
 		// we add it to the wildcard map so that further runs don't require such filtering again.
@@ -179,19 +176,15 @@ func (c *Client) filterWildcards(st *store.Store) error {
 				for host := range record.Hostnames {
 					isWildcard, ips := c.wildcardResolver.LookupHost(host)
 					if len(ips) > 0 {
-						c.wildcardIPMutex.Lock()
 						for ip := range ips {
 							// we add the single ip to the wildcard list
-							c.wildcardIPMap[ip] = struct{}{}
+							c.wildcardIPMap.Set(ip, struct{}{})
 						}
-						c.wildcardIPMutex.Unlock()
 					}
 
 					if isWildcard {
-						c.wildcardIPMutex.Lock()
 						// we also mark the original ip as wildcard, since at least once it resolved to this host
-						c.wildcardIPMap[record.IP] = struct{}{}
-						c.wildcardIPMutex.Unlock()
+						c.wildcardIPMap.Set(record.IP, struct{}{})
 						break
 					}
 				}
@@ -202,9 +195,10 @@ func (c *Client) filterWildcards(st *store.Store) error {
 	wildcardWg.Wait()
 
 	// drop all wildcard from the store
-	for wildcardIP := range c.wildcardIPMap {
-		st.Delete(wildcardIP)
-	}
+	c.wildcardIPMap.Iterate(func(k string, v struct{}) error {
+		st.Delete(k)
+		return nil
+	})
 
 	return nil
 }
