@@ -1,6 +1,6 @@
 module github.com/projectdiscovery/shuffledns
 
-go 1.19
+go 1.21
 
 require (
 	github.com/miekg/dns v1.1.59
