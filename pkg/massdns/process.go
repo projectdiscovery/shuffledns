@@ -184,7 +184,9 @@ func (c *Client) filterWildcards(st *store.Store) error {
 
 					if isWildcard {
 						// we also mark the original ip as wildcard, since at least once it resolved to this host
-						c.wildcardIPMap.Set(record.IP, struct{}{})
+						if err := c.wildcardIPMap.Set(record.IP, struct{}{}); err != nil {
+							gologger.Error().Msgf("could not set wildcard ip: %s", err)
+						}
 						break
 					}
 				}
@@ -195,12 +197,10 @@ func (c *Client) filterWildcards(st *store.Store) error {
 	wildcardWg.Wait()
 
 	// drop all wildcard from the store
-	c.wildcardIPMap.Iterate(func(k string, v struct{}) error {
+	return c.wildcardIPMap.Iterate(func(k string, v struct{}) error {
 		st.Delete(k)
 		return nil
 	})
-
-	return nil
 }
 
 func (c *Client) writeOutput(store *store.Store) error {

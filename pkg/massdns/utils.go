@@ -28,10 +28,13 @@ func (c *Client) DumpWildcardsToFile(filename string) error {
 	defer f.Close()
 
 	bw := bufio.NewWriter(f)
-	c.wildcardIPMap.Iterate(func(k string, v struct{}) error {
+	err = c.wildcardIPMap.Iterate(func(k string, v struct{}) error {
 		_, err := bw.WriteString(k + "\n")
 		return err
 	})
+	if err != nil {
+		return err
+	}
 
 	return bw.Flush() // Explicitly flush at the end and handle the error if any
 }
