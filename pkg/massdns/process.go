@@ -53,7 +53,7 @@ func (c *Client) Process() error {
 	if c.config.MassdnsRaw == "" {
 		// Create a temporary file for the massdns output
 		gologger.Info().Msgf("Creating temporary massdns output directory: %s\n", tmpDir)
-		err = c.runMassDNS(massDNSOutput, shstore)
+		err = c.runMassDNS(massDNSOutput)
 		if err != nil {
 			return fmt.Errorf("could not execute massdns: %w", err)
 		}
@@ -84,7 +84,7 @@ func (c *Client) Process() error {
 	return c.writeOutput(shstore)
 }
 
-func (c *Client) runMassDNS(output string, store *store.Store) error {
+func (c *Client) runMassDNS(output string) error {
 	if c.config.Domain != "" {
 		gologger.Info().Msgf("Executing massdns on %s\n", c.config.Domain)
 	} else {
@@ -230,6 +230,10 @@ func (c *Client) writeOutput(store *store.Store) error {
 	// write count of resolved hosts
 	resolvedCount := 0
 	for _, record := range store.IP {
+		if c.config.OnResult != nil {
+			c.config.OnResult(record)
+		}
+
 		for hostname := range record.Hostnames {
 			// Skip if we already printed this subdomain once
 			if _, ok := uniqueMap[hostname]; ok {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
+	"github.com/projectdiscovery/shuffledns/internal/store"
 	fileutil "github.com/projectdiscovery/utils/file"
 	updateutils "github.com/projectdiscovery/utils/update"
 )
@@ -36,6 +37,8 @@ type Options struct {
 	MassDnsCmd         string // Supports massdns flags(example -i)
 	Stdin              bool   // Stdin specifies whether stdin input was given to the process
 	DisableUpdateCheck bool   // DisableUpdateCheck disable automatic update check
+
+	OnResult func(*store.IPMeta)
 }
 
 // ParseOptions parses the command line flags provided by a user
