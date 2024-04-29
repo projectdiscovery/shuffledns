@@ -178,7 +178,9 @@ func (c *Client) filterWildcards(st *store.Store) error {
 					if len(ips) > 0 {
 						for ip := range ips {
 							// we add the single ip to the wildcard list
-							c.wildcardIPMap.Set(ip, struct{}{})
+							if err := c.wildcardIPMap.Set(ip, struct{}{}); err != nil {
+								gologger.Error().Msgf("could not set wildcard ip: %s", err)
+							}
 						}
 					}
 
