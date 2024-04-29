@@ -6,23 +6,21 @@ import (
 	"os"
 )
 
-// IsBlankFile checks if a file is blank
+// IsBlankFile checks if a file is blank (empty).
 func IsBlankFile(file string) (bool, error) {
 	stat, err := os.Stat(file)
 	if err != nil {
-		return true, err
+		return false, err // Return false along with the error if unable to obtain file stats
 	}
-	if stat.Size() <= 1 {
-		return true, nil
-	}
-	return false, nil
+	return stat.Size() == 0, nil // Return true if the file size is 0, indicating it is empty
 }
 
-// DumpWildcardsToFile dumps the wildcard ips list to file
+// DumpWildcardsToFile dumps the wildcard IPs list to a file.
 func (c *Client) DumpWildcardsToFile(filename string) error {
 	if len(c.wildcardIPMap) == 0 {
 		return errors.New("no wildcards")
 	}
+
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -31,8 +29,10 @@ func (c *Client) DumpWildcardsToFile(filename string) error {
 
 	bw := bufio.NewWriter(f)
 	for k := range c.wildcardIPMap {
-		_, _ = bw.WriteString(k + "\n")
+		if _, err := bw.WriteString(k + "\n"); err != nil {
+			return err // Handle errors immediately when writing to buffer
+		}
 	}
-	defer bw.Flush()
-	return nil
+
+	return bw.Flush() // Explicitly flush at the end and handle the error if any
 }
