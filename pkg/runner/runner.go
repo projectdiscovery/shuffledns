@@ -184,6 +184,7 @@ func (r *Runner) runMassdns(inputFile string) {
 		StrictWildcard:     r.options.StrictWildcard,
 		WildcardOutputFile: r.options.WildcardOutputFile,
 		MassDnsCmd:         r.options.MassDnsCmd,
+		OnResult:           r.options.OnResult,
 	})
 	if err != nil {
 		gologger.Error().Msgf("Could not create massdns client: %s\n", err)

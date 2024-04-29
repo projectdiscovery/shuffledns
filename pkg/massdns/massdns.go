@@ -3,6 +3,7 @@ package massdns
 import (
 	"sync"
 
+	"github.com/projectdiscovery/shuffledns/internal/store"
 	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
 )
 
@@ -46,6 +47,9 @@ type Config struct {
 	WildcardOutputFile string
 	// MassDnsCmd supports massdns flags
 	MassDnsCmd string
+
+	// todo: this is redundant with the original options struct?
+	OnResult func(*store.IPMeta)
 }
 
 // excellentResolvers contains some resolvers used in dns verification step
