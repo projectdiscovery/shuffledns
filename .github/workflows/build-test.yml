@@ -36,6 +36,6 @@ jobs:
           sudo make install
         
       # Tests
-      # - name: Basic Usage
-      #   run: go run . -d scanme.sh -r ../../tests/resolvers.txt -w ../../tests/wordlist.txt
-      #   working-directory: cmd/shuffledns/
+      - name: Basic Usage
+        run: go run . -d scanme.sh -r ../../tests/resolvers.txt -w ../../tests/wordlist.txt
+        working-directory: cmd/shuffledns/
