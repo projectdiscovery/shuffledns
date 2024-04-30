@@ -37,5 +37,5 @@ jobs:
         
       # Tests
       - name: Basic Usage
-        run: go run . -d scanme.sh -r ../../tests/resolvers.txt -w ../../tests/wordlist.txt
+        run: go run . -d scanme.sh -r ../../tests/resolvers.txt -w ../../tests/wordlist.txt -mode bruteforce
         working-directory: cmd/shuffledns/
