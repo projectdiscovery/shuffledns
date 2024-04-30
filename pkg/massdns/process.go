@@ -120,17 +120,22 @@ func (instance *Instance) Run(ctx context.Context) error {
 
 func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
 	// at first we need the full structure in memory to elaborate it in parallell
-	err := parser.ParseFile(tmpFile, func(domain string, ip []string) {
+	err := parser.ParseFile(tmpFile, func(domain string, ip []string) error {
 		for _, ip := range ip {
 			// Check if ip exists in the store. If not,
 			// add the ip to the map and continue with the next ip.
 			if !store.Exists(ip) {
-				store.New(ip, domain)
+				if err := store.New(ip, domain); err != nil {
+					return fmt.Errorf("could not create new record: %w", err)
+				}
 				continue
 			}
 
-			store.Update(ip, domain)
+			if err := store.Update(ip, domain); err != nil {
+				return fmt.Errorf("could not update record: %w", err)
+			}
 		}
+		return nil
 	})
 
 	if err != nil {
@@ -200,8 +205,7 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 
 	// drop all wildcard from the store
 	return instance.wildcardStore.Iterate(func(k string) error {
-		st.Delete(k)
-		return nil
+		return st.Delete(k)
 	})
 }
 

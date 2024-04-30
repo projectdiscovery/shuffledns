@@ -76,7 +76,9 @@ func (s *Store) LoadFromFile(file string) error {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		item := scanner.Text()
-		s.wildcards.Set(item, struct{}{})
+		if err := s.wildcards.Set(item, struct{}{}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

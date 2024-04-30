@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type OnResultFN func(domain string, ip []string)
+type OnResultFN func(domain string, ip []string) error
 
 func ParseFile(filename string, onResult OnResultFN) error {
 	file, err := os.Open(filename)
@@ -47,7 +47,9 @@ func ParseReader(reader io.Reader, onResult OnResultFN) error {
 		if text == "" {
 			if domain != "" {
 				cnameStart, nsStart = false, false
-				onResult(domain, ip)
+				if err := onResult(domain, ip); err != nil {
+					return err
+				}
 				domain, ip = "", nil
 			}
 		} else {
@@ -101,7 +103,9 @@ func ParseReader(reader io.Reader, onResult OnResultFN) error {
 	// Final callback to deliver the last piece of result
 	// if there's any.
 	if domain != "" {
-		onResult(domain, ip)
+		if err := onResult(domain, ip); err != nil {
+			return err
+		}
 	}
 	return nil
 }

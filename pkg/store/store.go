@@ -32,8 +32,8 @@ func New(dbPath string) (*Store, error) {
 }
 
 // New creates a new ip-hostname pair in the map
-func (s *Store) New(ip, hostname string) {
-	s.DB.Put([]byte(ip), []byte(hostname), nil)
+func (s *Store) New(ip, hostname string) error {
+	return s.DB.Put([]byte(ip), []byte(hostname), nil)
 }
 
 // Exists indicates if an IP exists in the map
@@ -51,17 +51,17 @@ func (s *Store) GetHostnames(ip string) string {
 	return string(hostname)
 }
 
-func (s *Store) Update(ip, hostname string) {
+func (s *Store) Update(ip, hostname string) error {
 	hostnames, err := s.DB.Get([]byte(ip), nil)
 	if err != nil {
-		return
+		return err
 	}
-	s.DB.Put([]byte(ip), []byte(string(hostnames)+","+hostname), nil)
+	return s.DB.Put([]byte(ip), []byte(string(hostnames)+","+hostname), nil)
 }
 
 // Delete deletes the records for an IP from store.
-func (s *Store) Delete(ip string) {
-	s.DB.Delete([]byte(ip), nil)
+func (s *Store) Delete(ip string) error {
+	return s.DB.Delete([]byte(ip), nil)
 }
 
 // Close removes all the references to arrays and releases memory to the gc
