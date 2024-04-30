@@ -32,6 +32,7 @@ jobs:
       - name: Install massdns
         working-directory: massdns/
         run: |
+          ls
           make all
           make install
         
