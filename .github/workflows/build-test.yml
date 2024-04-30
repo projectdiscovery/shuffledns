@@ -32,9 +32,8 @@ jobs:
       - name: Install massdns
         working-directory: ./massdns
         run: |
-          ls -laR
           make all
-          make install
+          sudo make install
         
       # Tests
       # - name: Basic Usage
