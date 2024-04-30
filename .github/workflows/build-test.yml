@@ -27,7 +27,6 @@ jobs:
       - uses: actions/checkout@master
         with:
           name: blechschmidt/massdns
-          ref: refs/heads/release
           path: massdns
 
       - name: Install massdns
