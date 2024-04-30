@@ -55,7 +55,9 @@ func New(options Options) (*Instance, error) {
 	}
 
 	if options.TrustedResolvers != "" {
-		resolver.AddServersFromFile(options.TrustedResolvers)
+		if err := resolver.AddServersFromFile(options.TrustedResolvers); err != nil {
+			return nil, err
+		}
 	} else {
 		resolver.AddServersFromList(trustedResolvers)
 	}
