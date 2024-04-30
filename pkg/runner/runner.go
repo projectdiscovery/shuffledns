@@ -129,7 +129,9 @@ func (r *Runner) processDomain() {
 		if text == "" {
 			continue
 		}
-		_, _ = writer.WriteString(text + "." + r.options.Domain + "\n")
+		for _, domain := range r.options.Domains {
+			_, _ = writer.WriteString(text + "." + domain + "\n")
+		}
 	}
 	writer.Flush()
 	inputFile.Close()
@@ -167,7 +169,7 @@ func (r *Runner) processSubdomains() {
 // runMassdns runs the massdns tool on the list of inputs
 func (r *Runner) runMassdns(inputFile string) {
 	massdns, err := massdns.New(massdns.Options{
-		Domain:             r.options.Domain,
+		Domains:            r.options.Domains,
 		Retries:            r.options.Retries,
 		MassdnsPath:        r.options.MassdnsPath,
 		Threads:            r.options.Threads,

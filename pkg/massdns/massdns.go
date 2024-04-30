@@ -14,7 +14,7 @@ type Instance struct {
 
 type Options struct {
 	// Domain is the domain specified for enumeration
-	Domain string
+	Domains []string
 	// Retries is the number of retries for dns
 	Retries int
 	// MassdnsPath is the path to the binary
@@ -49,7 +49,7 @@ type Options struct {
 
 func New(options Options) (*Instance, error) {
 	// Create a resolver and load resolverrs from list
-	resolver, err := wildcards.NewResolver(options.Domain, options.Retries)
+	resolver, err := wildcards.NewResolver(options.Domains, options.Retries)
 	if err != nil {
 		return nil, err
 	}

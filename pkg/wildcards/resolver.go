@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/miekg/dns"
+	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/roundrobin/transport"
+	stringsutil "github.com/projectdiscovery/utils/strings"
 	"github.com/rs/xid"
 )
 
@@ -14,16 +16,16 @@ import (
 type Resolver struct {
 	// servers contains the dns servers to use
 	servers *transport.RoundTransport
-	// domain is the domain to perform enumeration on
-	domain string
+	// domains is the list of domains to perform enumeration on
+	domains []string
 	// maxRetries is the maximum number of retries allowed
 	maxRetries int
 }
 
 // NewResolver initializes and creates a new resolver to find wildcards
-func NewResolver(domain string, retries int) (*Resolver, error) {
+func NewResolver(domains []string, retries int) (*Resolver, error) {
 	resolver := &Resolver{
-		domain:     domain,
+		domains:    domains,
 		maxRetries: retries,
 	}
 	return resolver, nil
@@ -68,7 +70,19 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 	orig := make(map[string]struct{})
 	wildcards := make(map[string]struct{})
 
-	subdomainPart := strings.TrimSuffix(host, "."+w.domain)
+	var domain string
+	for _, domainCandidate := range w.domains {
+		if stringsutil.HasSuffixAny(host, "."+domainCandidate) {
+			domain = domainCandidate
+			break
+		}
+	}
+
+	if domain == "" {
+		gologger.Fatal().Msgf("No domain found for %s", host)
+	}
+
+	subdomainPart := strings.TrimSuffix(host, "."+domain)
 	subdomainTokens := strings.Split(subdomainPart, ".")
 
 	// Build an array by preallocating a slice of a length
@@ -77,10 +91,10 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 	// A permutation is generated for each level of the subdomain.
 	var hosts []string
 	hosts = append(hosts, host)
-	hosts = append(hosts, xid.New().String()+"."+w.domain)
+	hosts = append(hosts, xid.New().String()+"."+domain)
 
 	for i := 0; i < len(subdomainTokens); i++ {
-		newhost := xid.New().String() + "." + strings.Join(subdomainTokens[i:], ".") + "." + w.domain
+		newhost := xid.New().String() + "." + strings.Join(subdomainTokens[i:], ".") + "." + domain
 		hosts = append(hosts, newhost)
 	}
 

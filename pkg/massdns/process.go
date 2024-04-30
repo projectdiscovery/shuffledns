@@ -75,8 +75,8 @@ func (instance *Instance) Run(ctx context.Context) error {
 
 	// Check if we need to run massdns
 	if instance.options.MassdnsRaw == "" {
-		if instance.options.Domain != "" {
-			gologger.Info().Msgf("Executing massdns on %s\n", instance.options.Domain)
+		if len(instance.options.Domains) > 0 {
+			gologger.Info().Msgf("Executing massdns on %s\n", strings.Join(instance.options.Domains, ", "))
 		} else {
 			gologger.Info().Msgf("Executing massdns\n")
 		}
@@ -103,7 +103,7 @@ func (instance *Instance) Run(ctx context.Context) error {
 	gologger.Info().Msgf("Massdns output parsing completed\n")
 
 	// Perform wildcard filtering only if domain name has been specified
-	if instance.options.Domain != "" {
+	if len(instance.options.Domains) > 0 {
 		gologger.Info().Msgf("Started removing wildcards records\n")
 		err = instance.filterWildcards(shstore)
 		if err != nil {

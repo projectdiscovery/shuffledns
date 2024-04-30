@@ -37,7 +37,7 @@ func (options *Options) validateOptions() error {
 		if options.Wordlist == "" {
 			return errors.New("wordlist not specified")
 		}
-		if options.Domain == "" {
+		if len(options.Domains) == 0 {
 			return errors.New("domain not specified")
 		}
 	case "resolve":
@@ -45,7 +45,7 @@ func (options *Options) validateOptions() error {
 			return errors.New("specify subdomains to resolve via flag or stdin")
 		}
 		// If the optional domain name is not specified, wildcard filtering will be automatically disabled
-		if options.Domain == "" {
+		if len(options.Domains) == 0 {
 			gologger.Print().Msgf("Wildcard filtering will be automatically disabled as no domain name has been provided")
 		}
 	case "wildcard-filter":
@@ -53,7 +53,7 @@ func (options *Options) validateOptions() error {
 		if options.MassdnsRaw == "" {
 			return errors.New("no massdns input file specified")
 		}
-		if options.Domain == "" {
+		if len(options.Domains) == 0 {
 			return errors.New("domain not specified")
 		}
 	default:
