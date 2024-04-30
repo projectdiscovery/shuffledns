@@ -12,7 +12,7 @@ func TestParserParseSingleIP(t *testing.T) {
 
 	var domain string
 	var ip []string
-	err := Parse(strings.NewReader(sampleData), func(Domain string, IP []string) {
+	err := ParseReader(strings.NewReader(sampleData), func(Domain string, IP []string) {
 		domain = Domain
 		ip = IP
 	})
@@ -29,7 +29,7 @@ docs.hackerone.com. A 185.199.111.152`
 
 	var domain []string
 	var ip []string
-	err := Parse(strings.NewReader(sampleData), func(Domain string, IP []string) {
+	err := ParseReader(strings.NewReader(sampleData), func(Domain string, IP []string) {
 		domain = append(domain, Domain)
 		ip = append(ip, IP[0])
 	})
@@ -48,7 +48,7 @@ hacker0x01.github.io. A 185.199.110.153`
 
 	var domain string
 	var ip []string
-	err := Parse(strings.NewReader(sampleData), func(Domain string, IP []string) {
+	err := ParseReader(strings.NewReader(sampleData), func(Domain string, IP []string) {
 		domain = Domain
 		ip = IP
 	})
@@ -65,7 +65,7 @@ bugbounty-local.herokudns.io. A 185.199.111.153`
 
 	var domain string
 	var ip []string
-	err := Parse(strings.NewReader(sampleData), func(Domain string, IP []string) {
+	err := ParseReader(strings.NewReader(sampleData), func(Domain string, IP []string) {
 		domain = Domain
 		ip = IP
 	})

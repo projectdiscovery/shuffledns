@@ -116,14 +116,8 @@ func (instance *Instance) Run(ctx context.Context) error {
 }
 
 func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
-	massdnsOutput, err := os.Open(tmpFile)
-	if err != nil {
-		return fmt.Errorf("could not open massdns output file: %w", err)
-	}
-	defer massdnsOutput.Close()
-
 	// at first we need the full structure in memory to elaborate it in parallell
-	err = parser.Parse(massdnsOutput, func(domain string, ip []string) {
+	err := parser.ParseFile(tmpFile, func(domain string, ip []string) {
 		for _, ip := range ip {
 			// Check if ip exists in the store. If not,
 			// add the ip to the map and continue with the next ip.
