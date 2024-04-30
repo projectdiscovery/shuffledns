@@ -5,7 +5,6 @@ import (
 
 	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
-	"github.com/projectdiscovery/shuffledns/pkg/store"
 	updateutils "github.com/projectdiscovery/utils/update"
 )
 
@@ -34,7 +33,7 @@ type Options struct {
 	DisableUpdateCheck bool   // DisableUpdateCheck disable automatic update check
 	Mode               string
 
-	OnResult func(*store.IPMeta)
+	OnResult func(ip string, hostnames []string)
 }
 
 // ParseOptions parses the command line flags provided by a user

@@ -1,15 +1,13 @@
 package massdns
 
 import (
-	"github.com/projectdiscovery/shuffledns/pkg/store"
 	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
-	mapsutil "github.com/projectdiscovery/utils/maps"
 )
 
 type Instance struct {
 	options Options
 
-	wildcardIPMap *mapsutil.SyncLockMap[string, struct{}]
+	wildcardStore *wildcards.Store
 
 	wildcardResolver *wildcards.Resolver
 }
@@ -44,7 +42,7 @@ type Options struct {
 	// MassDnsCmd supports massdns flags
 	MassDnsCmd string
 
-	OnResult func(*store.IPMeta)
+	OnResult func(ip string, hostnames []string)
 }
 
 func New(options Options) (*Instance, error) {
@@ -56,9 +54,11 @@ func New(options Options) (*Instance, error) {
 
 	resolver.AddServersFromList(trustedResolvers)
 
+	wildcardStore := wildcards.NewStore()
+
 	instance := &Instance{
 		options:          options,
-		wildcardIPMap:    mapsutil.NewSyncLockMap[string, struct{}](),
+		wildcardStore:    wildcardStore,
 		wildcardResolver: resolver,
 	}
 

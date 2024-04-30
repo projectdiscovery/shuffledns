@@ -55,7 +55,7 @@ func (instance *Instance) Run(ctx context.Context) error {
 	}
 
 	// Check for blank input file or non-existent input file
-	blank, err := IsBlankFile(inputFile)
+	blank, err := IsEmptyFile(inputFile)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,10 @@ func (instance *Instance) Run(ctx context.Context) error {
 	}
 
 	// Create a store for storing ip metadata
-	shstore := store.New()
+	shstore, err := store.New(instance.options.TempDir)
+	if err != nil {
+		return fmt.Errorf("could not create store: %w", err)
+	}
 	defer shstore.Close()
 
 	// Set the correct target file
@@ -126,12 +129,7 @@ func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.St
 				continue
 			}
 
-			// Get the IP meta-information from the store.
-			record := store.Get(ip)
-
-			// Put the new hostname and increment the counter by 1.
-			record.Hostnames[domain] = struct{}{}
-			record.Counter++
+			store.Update(ip, domain)
 		}
 	})
 
@@ -162,25 +160,25 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 	// Start to work in parallel on wildcards
 	wildcardWg := sizedwaitgroup.New(instance.options.WildcardsThreads)
 
-	for _, record := range st.IP {
+	st.Iterate(func(ip string, hostnames []string, counter int) {
 		// We've stumbled upon a wildcard, just ignore it.
-		if instance.wildcardIPMap.Has(record.IP) {
-			continue
+		if instance.wildcardStore.Has(ip) {
+			return
 		}
 
 		// Perform wildcard detection on the ip, if an IP is found in the wildcard
 		// we add it to the wildcard map so that further runs don't require such filtering again.
-		if record.Counter >= 5 || instance.options.StrictWildcard {
+		if counter >= 5 || instance.options.StrictWildcard {
 			wildcardWg.Add()
-			go func(record *store.IPMeta) {
+			go func(IP string, hostnames []string) {
 				defer wildcardWg.Done()
 
-				for host := range record.Hostnames {
+				for _, host := range hostnames {
 					isWildcard, ips := instance.wildcardResolver.LookupHost(host)
 					if len(ips) > 0 {
 						for ip := range ips {
 							// we add the single ip to the wildcard list
-							if err := instance.wildcardIPMap.Set(ip, struct{}{}); err != nil {
+							if err := instance.wildcardStore.Set(ip); err != nil {
 								gologger.Error().Msgf("could not set wildcard ip: %s", err)
 							}
 						}
@@ -188,20 +186,20 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 
 					if isWildcard {
 						// we also mark the original ip as wildcard, since at least once it resolved to this host
-						if err := instance.wildcardIPMap.Set(record.IP, struct{}{}); err != nil {
+						if err := instance.wildcardStore.Set(IP); err != nil {
 							gologger.Error().Msgf("could not set wildcard ip: %s", err)
 						}
 						break
 					}
 				}
-			}(record)
+			}(ip, hostnames)
 		}
-	}
+	})
 
 	wildcardWg.Wait()
 
 	// drop all wildcard from the store
-	return instance.wildcardIPMap.Iterate(func(k string, v struct{}) error {
+	return instance.wildcardStore.Iterate(func(k string) error {
 		st.Delete(k)
 		return nil
 	})
@@ -227,12 +225,13 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 
 	// write count of resolved hosts
 	resolvedCount := 0
-	for _, record := range store.IP {
+
+	store.Iterate(func(ip string, hostnames []string, counter int) {
 		if instance.options.OnResult != nil {
-			instance.options.OnResult(record)
+			instance.options.OnResult(ip, hostnames)
 		}
 
-		for hostname := range record.Hostnames {
+		for _, hostname := range hostnames {
 			// Skip if we already printed this subdomain once
 			if _, ok := uniqueMap[hostname]; ok {
 				continue
@@ -242,7 +241,7 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 			if instance.options.Json {
 				hostnameJson, err := json.Marshal(map[string]interface{}{"hostname": hostname})
 				if err != nil {
-					return fmt.Errorf("could not marshal output as json: %v", err)
+					gologger.Error().Msgf("could not marshal output as json: %v", err)
 				}
 
 				buffer.WriteString(string(hostnameJson))
@@ -261,7 +260,8 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 			buffer.Reset()
 			resolvedCount++
 		}
-	}
+	})
+
 	gologger.Info().Msgf("Total resolved: %d\n", resolvedCount)
 
 	// Close the files and return

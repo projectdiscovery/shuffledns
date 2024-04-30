@@ -10,6 +10,7 @@ require (
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.5.0
 	github.com/stretchr/testify v1.9.0
+	github.com/syndtr/goleveldb v1.0.0
 )
 
 require (

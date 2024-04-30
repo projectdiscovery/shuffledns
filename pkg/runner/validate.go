@@ -24,9 +24,9 @@ func (options *Options) validateOptions() error {
 	}
 
 	// Check if resolvers are blank
-	if blank, err := massdns.IsBlankFile(options.ResolversFile); err == nil {
+	if blank, err := massdns.IsEmptyFile(options.ResolversFile); err == nil {
 		if blank {
-			return errors.New("blank resolver list specified")
+			return errors.New("empty resolver list specified")
 		}
 	} else {
 		return fmt.Errorf("could not read resolvers: %w", err)

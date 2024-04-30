@@ -197,5 +197,5 @@ func (r *Runner) runMassdns(inputFile string) {
 		_ = massdns.DumpWildcardsToFile(r.options.WildcardOutputFile)
 	}
 
-	gologger.Info().Msgf("Finished resolving. Hack the Planet!\n")
+	gologger.Info().Msgf("Finished resolving.\n")
 }
