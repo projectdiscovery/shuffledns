@@ -1,15 +1,11 @@
 package runner
 
 import (
-	"bytes"
-	"io"
 	"os"
-	"strings"
 
 	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/shuffledns/pkg/store"
-	fileutil "github.com/projectdiscovery/utils/file"
 	updateutils "github.com/projectdiscovery/utils/update"
 )
 
@@ -35,8 +31,8 @@ type Options struct {
 	StrictWildcard     bool   // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
 	WildcardOutputFile string // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
 	MassDnsCmd         string // Supports massdns flags(example -i)
-	Stdin              bool   // Stdin specifies whether stdin input was given to the process
 	DisableUpdateCheck bool   // DisableUpdateCheck disable automatic update check
+	Mode               string
 
 	OnResult func(*store.IPMeta)
 }
@@ -54,6 +50,7 @@ func ParseOptions() *Options {
 		flagSet.StringVarP(&options.Wordlist, "wordlist", "w", "", "File containing words to bruteforce for domain"),
 		flagSet.StringVarP(&options.ResolversFile, "resolver", "r", "", "File containing list of resolvers for enumeration"),
 		flagSet.StringVarP(&options.MassdnsRaw, "raw-input", "ri", "", "Validate raw full massdns output"),
+		flagSet.StringVar(&options.Mode, "mode", "", "Execution mode (bruteforce, resolve)"),
 	)
 
 	flagSet.CreateGroup("rate-limit", "Rate-Limit",
@@ -92,9 +89,6 @@ func ParseOptions() *Options {
 
 	_ = flagSet.Parse()
 
-	// Check if stdin pipe was given
-	options.Stdin = fileutil.HasStdin()
-
 	// Read the inputs and configure the logging
 	options.configureOutput()
 
@@ -122,20 +116,6 @@ func ParseOptions() *Options {
 	err := options.validateOptions()
 	if err != nil {
 		gologger.Fatal().Msgf("Program exiting: %s\n", err)
-	}
-
-	// if all the flags are provided via cli we ignore stdin by draining it
-	if options.Stdin && (options.Domain != "" && options.ResolversFile != "" && options.Wordlist != "") {
-		// drain stdin
-		_, _ = io.Copy(io.Discard, os.Stdin)
-		options.Stdin = false
-	}
-
-	// Set the domain in the config if provided by user from the stdin
-	if options.Stdin && options.Wordlist != "" {
-		buffer := &bytes.Buffer{}
-		_, _ = io.Copy(buffer, os.Stdin)
-		options.Domain = strings.TrimRight(buffer.String(), "\r\n")
 	}
 
 	return options

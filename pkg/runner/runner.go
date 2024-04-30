@@ -82,7 +82,7 @@ func (r *Runner) findBinary() string {
 // binary and runs the actual enumeration
 func (r *Runner) RunEnumeration() {
 	// Handle a list of subdomains to resolve
-	if r.options.SubdomainsList != "" {
+	if r.options.SubdomainsList != "" || fileutil.HasStdin() {
 		r.processSubdomains()
 		return
 	}
@@ -90,18 +90,6 @@ func (r *Runner) RunEnumeration() {
 	// Handle a domain to bruteforce with wordlist
 	if r.options.Wordlist != "" {
 		r.processDomain()
-		return
-	}
-
-	// Handle stdin input
-	if r.options.Stdin {
-		// Is the stdin input a domain for bruteforce
-		if r.options.Wordlist != "" {
-			r.processDomain()
-			return
-		}
-		// Write the input from stdin to a file and resolve it.
-		r.processSubdomains()
 		return
 	}
 
@@ -158,15 +146,15 @@ func (r *Runner) processSubdomains() {
 	var resolveFile string
 
 	// If there is stdin, write the resolution list to the file
-	if r.options.Stdin && r.options.SubdomainsList == "" {
-		resolveFile = filepath.Join(r.tempDir, xid.New().String())
-		file, err := os.Create(resolveFile)
+	if fileutil.HasStdin() && r.options.SubdomainsList == "" {
+		file, err := os.CreateTemp(r.tempDir, "massdns-stdin-")
 		if err != nil {
 			gologger.Error().Msgf("Could not create resolution list (%s): %s\n", r.tempDir, err)
 			return
 		}
 		_, _ = io.Copy(file, os.Stdin)
 		file.Close()
+		resolveFile = file.Name()
 	} else {
 		// Use the file if user has provided one
 		resolveFile = r.options.SubdomainsList
