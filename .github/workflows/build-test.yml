@@ -27,10 +27,10 @@ jobs:
       - uses: actions/checkout@master
         with:
           name: blechschmidt/massdns
-          path: massdns
+          path: ./massdns
 
       - name: Install massdns
-        working-directory: massdns/
+        working-directory: ./massdns
         run: |
           ls
           make all
