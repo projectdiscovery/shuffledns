@@ -2,15 +2,18 @@ package runner
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/shuffledns/pkg/massdns"
+	fileutil "github.com/projectdiscovery/utils/file"
 	"github.com/rs/xid"
 )
 
@@ -55,18 +58,24 @@ func (r *Runner) Close() {
 // findBinary searches for massdns binary in various pre-defined paths
 // only linux and macos paths are supported rn
 func (r *Runner) findBinary() string {
-	locations := []string{
+	otherCommonLocations := []string{
 		"/usr/bin/massdns",
 		"/usr/local/bin/massdns",
 		"/data/data/com.termux/files/usr/bin/massdns",
 	}
 
-	for _, file := range locations {
-		if _, err := os.Stat(file); !os.IsNotExist(err) {
+	for _, file := range otherCommonLocations {
+		if fileutil.FileExists(file) {
 			return file
 		}
 	}
-	return ""
+
+	file, err := exec.LookPath("massdns")
+	if err != nil {
+		return ""
+	}
+
+	return file
 }
 
 // RunEnumeration sets up the input layer for giving input to massdns
@@ -169,7 +178,7 @@ func (r *Runner) processSubdomains() {
 
 // runMassdns runs the massdns tool on the list of inputs
 func (r *Runner) runMassdns(inputFile string) {
-	massdns, err := massdns.New(massdns.Config{
+	massdns, err := massdns.New(massdns.Options{
 		Domain:             r.options.Domain,
 		Retries:            r.options.Retries,
 		MassdnsPath:        r.options.MassdnsPath,
@@ -191,7 +200,7 @@ func (r *Runner) runMassdns(inputFile string) {
 		return
 	}
 
-	err = massdns.Process()
+	err = massdns.Run(context.Background())
 	if err != nil {
 		gologger.Error().Msgf("Could not run massdns: %s\n", err)
 	}

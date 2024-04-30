@@ -6,17 +6,15 @@ import (
 	mapsutil "github.com/projectdiscovery/utils/maps"
 )
 
-// Client is a client for running massdns on a target
-type Client struct {
-	config Config
+type Instance struct {
+	options Options
 
 	wildcardIPMap *mapsutil.SyncLockMap[string, struct{}]
 
 	wildcardResolver *wildcards.Resolver
 }
 
-// Config contains configuration options for the massdns client
-type Config struct {
+type Options struct {
 	// Domain is the domain specified for enumeration
 	Domain string
 	// Retries is the number of retries for dns
@@ -46,33 +44,23 @@ type Config struct {
 	// MassDnsCmd supports massdns flags
 	MassDnsCmd string
 
-	// todo: this is redundant with the original options struct?
 	OnResult func(*store.IPMeta)
 }
 
-// excellentResolvers contains some resolvers used in dns verification step
-var excellentResolvers = []string{
-	"1.1.1.1",
-	"1.0.0.1",
-	"8.8.8.8",
-	"8.8.4.4",
-}
-
-// New returns a new massdns client for running enumeration
-// on a target.
-func New(config Config) (*Client, error) {
+func New(options Options) (*Instance, error) {
 	// Create a resolver and load resolverrs from list
-	resolver, err := wildcards.NewResolver(config.Domain, config.Retries)
+	resolver, err := wildcards.NewResolver(options.Domain, options.Retries)
 	if err != nil {
 		return nil, err
 	}
 
-	resolver.AddServersFromList(excellentResolvers)
+	resolver.AddServersFromList(trustedResolvers)
 
-	return &Client{
-		config: config,
-
+	instance := &Instance{
+		options:          options,
 		wildcardIPMap:    mapsutil.NewSyncLockMap[string, struct{}](),
 		wildcardResolver: resolver,
-	}, nil
+	}
+
+	return instance, nil
 }

@@ -2,13 +2,12 @@ package massdns
 
 import (
 	"bufio"
-	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -18,15 +17,41 @@ import (
 	"github.com/projectdiscovery/shuffledns/pkg/store"
 	folderutil "github.com/projectdiscovery/utils/folder"
 	"github.com/remeh/sizedwaitgroup"
-	"github.com/rs/xid"
 )
 
-// Process runs the actual enumeration process returning a file
-func (c *Client) Process() error {
+// runs massdns binary with the specified options
+func (instance *Instance) RunWithContext(ctx context.Context) (stdout, stderr string, took time.Duration, err error) {
+	start := time.Now()
+
+	stdoutFile, err := os.CreateTemp(instance.options.TempDir, "massdns-stdout-")
+	if err != nil {
+		return "", "", 0, fmt.Errorf("could not create temp file for massdns stdout: %w", err)
+	}
+	defer stdoutFile.Close()
+
+	stderrFile, err := os.CreateTemp(instance.options.TempDir, "massdns-stderr-")
+	if err != nil {
+		return "", "", 0, fmt.Errorf("could not create temp file for massdns stdout: %w", err)
+	}
+	defer stderrFile.Close()
+
+	// Run the command on a temp file and wait for the output
+	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "-t", "A", instance.options.InputFile, "-s", strconv.Itoa(instance.options.Threads)}
+	if instance.options.MassDnsCmd != "" {
+		args = append(args, strings.Split(instance.options.MassDnsCmd, " ")...)
+	}
+	cmd := exec.CommandContext(ctx, instance.options.MassdnsPath, args...)
+	cmd.Stdout = stdoutFile
+	cmd.Stderr = stderrFile
+	err = cmd.Run()
+	return stdoutFile.Name(), stderrFile.Name(), time.Since(start), err
+}
+
+func (instance *Instance) Run(ctx context.Context) error {
 	// Process a created list or the massdns input
-	inputFile := c.config.InputFile
-	if c.config.MassdnsRaw != "" {
-		inputFile = c.config.MassdnsRaw
+	inputFile := instance.options.InputFile
+	if instance.options.MassdnsRaw != "" {
+		inputFile = instance.options.MassdnsRaw
 	}
 
 	// Check for blank input file or non-existent input file
@@ -43,25 +68,29 @@ func (c *Client) Process() error {
 	defer shstore.Close()
 
 	// Set the correct target file
-	tmpDir := c.config.TempDir
-	massDNSOutput := filepath.Join(tmpDir, xid.New().String())
-	if c.config.MassdnsRaw != "" {
-		massDNSOutput = c.config.MassdnsRaw
-	}
+	tmpDir := instance.options.TempDir
 
 	// Check if we need to run massdns
-	if c.config.MassdnsRaw == "" {
-		// Create a temporary file for the massdns output
-		gologger.Info().Msgf("Creating temporary massdns output directory: %s\n", tmpDir)
-		err = c.runMassDNS(massDNSOutput)
-		if err != nil {
-			return fmt.Errorf("could not execute massdns: %w", err)
+	if instance.options.MassdnsRaw == "" {
+		if instance.options.Domain != "" {
+			gologger.Info().Msgf("Executing massdns on %s\n", instance.options.Domain)
+		} else {
+			gologger.Info().Msgf("Executing massdns\n")
 		}
+
+		// Create a temporary file for the massdns output
+		gologger.Info().Msgf("using massdns output directory: %s\n", tmpDir)
+		_, _, took, err := instance.RunWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("could not execute massdns: %s", err)
+		}
+
+		gologger.Info().Msgf("Massdns execution took %s\n", took)
 	}
 
 	gologger.Info().Msgf("Started parsing massdns output\n")
 
-	err = c.parseMassDNSOutputDir(tmpDir, shstore)
+	err = instance.parseMassDNSOutputDir(tmpDir, shstore)
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
 	}
@@ -69,9 +98,9 @@ func (c *Client) Process() error {
 	gologger.Info().Msgf("Massdns output parsing completed\n")
 
 	// Perform wildcard filtering only if domain name has been specified
-	if c.config.Domain != "" {
+	if instance.options.Domain != "" {
 		gologger.Info().Msgf("Started removing wildcards records\n")
-		err = c.filterWildcards(shstore)
+		err = instance.filterWildcards(shstore)
 		if err != nil {
 			return fmt.Errorf("could not parse massdns output: %w", err)
 		}
@@ -81,33 +110,10 @@ func (c *Client) Process() error {
 	gologger.Info().Msgf("Finished enumeration, started writing output\n")
 
 	// Write the final elaborated list out
-	return c.writeOutput(shstore)
+	return instance.writeOutput(shstore)
 }
 
-func (c *Client) runMassDNS(output string) error {
-	if c.config.Domain != "" {
-		gologger.Info().Msgf("Executing massdns on %s\n", c.config.Domain)
-	} else {
-		gologger.Info().Msgf("Executing massdns\n")
-	}
-	now := time.Now()
-	// Run the command on a temp file and wait for the output
-	args := []string{"-r", c.config.ResolversFile, "-o", "Snl", "-t", "A", c.config.InputFile, "-w", output, "-s", strconv.Itoa(c.config.Threads)}
-	if c.config.MassDnsCmd != "" {
-		args = append(args, strings.Split(c.config.MassDnsCmd, " ")...)
-	}
-	cmd := exec.Command(c.config.MassdnsPath, args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
-		return fmt.Errorf("could not execute massdns: %w\ndetailed error: %s", err, stderr.String())
-	}
-	gologger.Info().Msgf("Massdns execution took %s\n", time.Since(now))
-	return nil
-}
-
-func (c *Client) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
+func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
 	massdnsOutput, err := os.Open(tmpFile)
 	if err != nil {
 		return fmt.Errorf("could not open massdns output file: %w", err)
@@ -140,14 +146,14 @@ func (c *Client) parseMassDNSOutputFile(tmpFile string, store *store.Store) erro
 	return nil
 }
 
-func (c *Client) parseMassDNSOutputDir(tmpDir string, store *store.Store) error {
+func (instance *Instance) parseMassDNSOutputDir(tmpDir string, store *store.Store) error {
 	tmpFiles, err := folderutil.GetFiles(tmpDir)
 	if err != nil {
 		return fmt.Errorf("could not open massdns output directory: %w", err)
 	}
 
 	for _, tmpFile := range tmpFiles {
-		err = c.parseMassDNSOutputFile(tmpFile, store)
+		err = instance.parseMassDNSOutputFile(tmpFile, store)
 		if err != nil {
 			return fmt.Errorf("could not parse massdns output: %w", err)
 		}
@@ -156,29 +162,29 @@ func (c *Client) parseMassDNSOutputDir(tmpDir string, store *store.Store) error 
 	return nil
 }
 
-func (c *Client) filterWildcards(st *store.Store) error {
+func (instance *Instance) filterWildcards(st *store.Store) error {
 	// Start to work in parallel on wildcards
-	wildcardWg := sizedwaitgroup.New(c.config.WildcardsThreads)
+	wildcardWg := sizedwaitgroup.New(instance.options.WildcardsThreads)
 
 	for _, record := range st.IP {
 		// We've stumbled upon a wildcard, just ignore it.
-		if c.wildcardIPMap.Has(record.IP) {
+		if instance.wildcardIPMap.Has(record.IP) {
 			continue
 		}
 
 		// Perform wildcard detection on the ip, if an IP is found in the wildcard
 		// we add it to the wildcard map so that further runs don't require such filtering again.
-		if record.Counter >= 5 || c.config.StrictWildcard {
+		if record.Counter >= 5 || instance.options.StrictWildcard {
 			wildcardWg.Add()
 			go func(record *store.IPMeta) {
 				defer wildcardWg.Done()
 
 				for host := range record.Hostnames {
-					isWildcard, ips := c.wildcardResolver.LookupHost(host)
+					isWildcard, ips := instance.wildcardResolver.LookupHost(host)
 					if len(ips) > 0 {
 						for ip := range ips {
 							// we add the single ip to the wildcard list
-							if err := c.wildcardIPMap.Set(ip, struct{}{}); err != nil {
+							if err := instance.wildcardIPMap.Set(ip, struct{}{}); err != nil {
 								gologger.Error().Msgf("could not set wildcard ip: %s", err)
 							}
 						}
@@ -186,7 +192,7 @@ func (c *Client) filterWildcards(st *store.Store) error {
 
 					if isWildcard {
 						// we also mark the original ip as wildcard, since at least once it resolved to this host
-						if err := c.wildcardIPMap.Set(record.IP, struct{}{}); err != nil {
+						if err := instance.wildcardIPMap.Set(record.IP, struct{}{}); err != nil {
 							gologger.Error().Msgf("could not set wildcard ip: %s", err)
 						}
 						break
@@ -199,21 +205,21 @@ func (c *Client) filterWildcards(st *store.Store) error {
 	wildcardWg.Wait()
 
 	// drop all wildcard from the store
-	return c.wildcardIPMap.Iterate(func(k string, v struct{}) error {
+	return instance.wildcardIPMap.Iterate(func(k string, v struct{}) error {
 		st.Delete(k)
 		return nil
 	})
 }
 
-func (c *Client) writeOutput(store *store.Store) error {
+func (instance *Instance) writeOutput(store *store.Store) error {
 	// Write the unique deduplicated output to the file or stdout
 	// depending on what the user has asked.
 	var output *os.File
 	var w *bufio.Writer
 	var err error
 
-	if c.config.OutputFile != "" {
-		output, err = os.Create(c.config.OutputFile)
+	if instance.options.OutputFile != "" {
+		output, err = os.Create(instance.options.OutputFile)
 		if err != nil {
 			return fmt.Errorf("could not create massdns output file: %v", err)
 		}
@@ -226,8 +232,8 @@ func (c *Client) writeOutput(store *store.Store) error {
 	// write count of resolved hosts
 	resolvedCount := 0
 	for _, record := range store.IP {
-		if c.config.OnResult != nil {
-			c.config.OnResult(record)
+		if instance.options.OnResult != nil {
+			instance.options.OnResult(record)
 		}
 
 		for hostname := range record.Hostnames {
@@ -237,7 +243,7 @@ func (c *Client) writeOutput(store *store.Store) error {
 			}
 			uniqueMap[hostname] = struct{}{}
 
-			if c.config.Json {
+			if instance.options.Json {
 				hostnameJson, err := json.Marshal(map[string]interface{}{"hostname": hostname})
 				if err != nil {
 					return fmt.Errorf("could not marshal output as json: %v", err)
