@@ -81,12 +81,6 @@ func (r *Runner) findBinary() string {
 // RunEnumeration sets up the input layer for giving input to massdns
 // binary and runs the actual enumeration
 func (r *Runner) RunEnumeration() {
-	// Handle a list of subdomains to resolve
-	if r.options.SubdomainsList != "" || fileutil.HasStdin() {
-		r.processSubdomains()
-		return
-	}
-
 	// Handle a domain to bruteforce with wordlist
 	if r.options.Wordlist != "" {
 		r.processDomain()
@@ -95,6 +89,12 @@ func (r *Runner) RunEnumeration() {
 
 	// Handle only wildcard filtering
 	if r.options.MassdnsRaw != "" {
+		r.processSubdomains()
+		return
+	}
+
+	// Handle a list of subdomains to resolve
+	if r.options.SubdomainsList != "" || fileutil.HasStdin() {
 		r.processSubdomains()
 		return
 	}
