@@ -15,6 +15,7 @@ type Options struct {
 	Domain             string // Domain is the domain to find subdomains
 	SubdomainsList     string // SubdomainsList is the file containing list of hosts to resolve
 	ResolversFile      string // ResolversFile is the file containing resolvers to use for enumeration
+	TrustedResolvers   string // TrustedResolvers is the file containing trusted resolvers
 	Wordlist           string // Wordlist is a wordlist to use for enumeration
 	MassdnsPath        string // MassdnsPath contains the path to massdns binary
 	Output             string // Output is the file to write found subdomains to.
