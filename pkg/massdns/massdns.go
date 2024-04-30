@@ -25,6 +25,8 @@ type Options struct {
 	InputFile string
 	// ResolversFile is the file with the resolvers
 	ResolversFile string
+	// TrustedResolvers is the file with the trusted resolvers
+	TrustedResolvers string
 	// TempDir is a temporary directory for storing massdns misc files
 	TempDir string
 	// OutputFile is the file to use for massdns output
@@ -52,7 +54,11 @@ func New(options Options) (*Instance, error) {
 		return nil, err
 	}
 
-	resolver.AddServersFromList(trustedResolvers)
+	if options.TrustedResolvers != "" {
+		resolver.AddServersFromFile(options.TrustedResolvers)
+	} else {
+		resolver.AddServersFromList(trustedResolvers)
+	}
 
 	wildcardStore := wildcards.NewStore()
 

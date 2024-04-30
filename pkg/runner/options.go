@@ -48,6 +48,7 @@ func ParseOptions() *Options {
 		flagSet.StringVarP(&options.SubdomainsList, "list", "l", "", "File containing list of subdomains to resolve"),
 		flagSet.StringVarP(&options.Wordlist, "wordlist", "w", "", "File containing words to bruteforce for domain"),
 		flagSet.StringVarP(&options.ResolversFile, "resolver", "r", "", "File containing list of resolvers for enumeration"),
+		flagSet.StringVarP(&options.TrustedResolvers, "trusted-resolver", "tr", "", "File containing list of trusted resolvers"),
 		flagSet.StringVarP(&options.MassdnsRaw, "raw-input", "ri", "", "Validate raw full massdns output"),
 		flagSet.StringVar(&options.Mode, "mode", "", "Execution mode (bruteforce, resolve)"),
 	)
