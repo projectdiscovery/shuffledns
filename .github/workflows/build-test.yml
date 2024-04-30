@@ -22,3 +22,21 @@ jobs:
       - name: Build
         run: go build .
         working-directory: cmd/shuffledns/
+
+      # Installing massdns
+      - uses: actions/checkout@master
+        with:
+          name: blechschmidt/massdns
+          ref: refs/heads/release
+          path: massdns
+
+      - name: Install massdns
+        working-directory: massdns/
+        run: |
+          make all
+          make install
+        
+      # Tests
+      # - name: Basic Usage
+      #   run: go run . -d scanme.sh -r ../../tests/resolvers.txt -w ../../tests/wordlist.txt
+      #   working-directory: cmd/shuffledns/
