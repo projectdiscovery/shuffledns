@@ -80,7 +80,9 @@ func (instance *Instance) Run(ctx context.Context) error {
 
 		// Create a temporary file for the massdns output
 		gologger.Info().Msgf("using massdns output directory: %s\n", tmpDir)
-		_, _, took, err := instance.RunWithContext(ctx)
+		stdoutFile, stderrFile, took, err := instance.RunWithContext(ctx)
+		gologger.Info().Msgf("massdns output file: %s\n", stdoutFile)
+		gologger.Info().Msgf("massdns error file: %s\n", stderrFile)
 		if err != nil {
 			return fmt.Errorf("could not execute massdns: %s", err)
 		}
