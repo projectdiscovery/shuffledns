@@ -24,7 +24,7 @@ jobs:
         working-directory: cmd/shuffledns/
 
       # Installing massdns
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
           name: blechschmidt/massdns
           path: ./massdns
@@ -32,7 +32,7 @@ jobs:
       - name: Install massdns
         working-directory: ./massdns
         run: |
-          ls
+          ls -laR
           make all
           make install
         
