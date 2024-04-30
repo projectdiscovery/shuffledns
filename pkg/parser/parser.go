@@ -50,7 +50,6 @@ func ParseReader(reader io.Reader, onResult OnResultFN) error {
 				onResult(domain, ip)
 				domain, ip = "", nil
 			}
-			continue
 		} else {
 			// Non empty line represents DNS answer section, we split on space,
 			// iterate over all the parts, and write the answer to the struct.
@@ -92,7 +91,6 @@ func ParseReader(reader io.Reader, onResult OnResultFN) error {
 				}
 			}
 		}
-		continue
 	}
 
 	// Return error if there was any.
