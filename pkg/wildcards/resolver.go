@@ -1,8 +1,6 @@
 package wildcards
 
 import (
-	"bufio"
-	"os"
 	"strings"
 
 	"github.com/miekg/dns"
@@ -14,11 +12,8 @@ import (
 
 // Resolver represents a dns resolver for removing wildcards
 type Resolver struct {
-	// servers contains the dns servers to use
-	servers *transport.RoundTransport
-	// domains is the list of domains to perform enumeration on
-	domains []string
-	// maxRetries is the maximum number of retries allowed
+	servers    *transport.RoundTransport
+	domains    []string
 	maxRetries int
 }
 
@@ -41,20 +36,9 @@ func (w *Resolver) AddServersFromList(list []string) {
 
 // AddServersFromFile adds the resolvers from a file to the list of servers
 func (w *Resolver) AddServersFromFile(file string) error {
-	f, err := os.Open(file)
+	servers, err := LoadResolversFromFile(file)
 	if err != nil {
 		return err
-	}
-	defer f.Close()
-
-	var servers []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		text := scanner.Text()
-		if text == "" {
-			continue
-		}
-		servers = append(servers, text+":53")
 	}
 
 	w.servers, _ = transport.New(servers...)
@@ -78,8 +62,10 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 		}
 	}
 
+	// ignore records without domain (todo: might be interesting to detect dangling domains)
 	if domain == "" {
-		gologger.Fatal().Msgf("No domain found for %s", host)
+		gologger.Info().Msgf("no domain found - skipping: %s", host)
+		return false, nil
 	}
 
 	subdomainPart := strings.TrimSuffix(host, "."+domain)

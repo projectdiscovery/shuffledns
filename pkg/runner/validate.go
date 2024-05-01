@@ -48,7 +48,7 @@ func (options *Options) validateOptions() error {
 		if len(options.Domains) == 0 {
 			gologger.Print().Msgf("Wildcard filtering will be automatically disabled as no domain name has been provided")
 		}
-	case "wildcard-filter":
+	case "filter":
 		// Check if the user just wants to perform wildcard filtering on an existing massdns output file.
 		if options.MassdnsRaw == "" {
 			return errors.New("no massdns input file specified")

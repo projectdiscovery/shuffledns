@@ -12,10 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectdiscovery/dnsx/libs/dnsx"
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/shuffledns/pkg/parser"
 	"github.com/projectdiscovery/shuffledns/pkg/store"
+	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
 	folderutil "github.com/projectdiscovery/utils/folder"
+	stringsutil "github.com/projectdiscovery/utils/strings"
 	"github.com/remeh/sizedwaitgroup"
 )
 
@@ -91,16 +94,27 @@ func (instance *Instance) Run(ctx context.Context) error {
 		}
 
 		gologger.Info().Msgf("Massdns execution took %s\n", took)
+
+		gologger.Info().Msgf("Started parsing massdns output\n")
+		gologger.Info().Msgf("Started parsing massdns output\n")
+
+		gologger.Info().Msgf("Started parsing massdns output\n")
+
+		err = instance.parseMassDNSOutputDir(tmpDir, shstore)
+		if err != nil {
+			return fmt.Errorf("could not parse massdns output: %w", err)
+		}
+
+		gologger.Info().Msgf("Massdns output parsing completed\n")
+	} else { // parse the input file
+		gologger.Info().Msgf("Started parsing massdns input\n")
+		err = instance.parseMassDNSOutputFile(instance.options.MassdnsRaw, shstore)
+		if err != nil {
+			return fmt.Errorf("could not parse massdns input: %w", err)
+		}
+
+		gologger.Info().Msgf("Massdns input parsing completed\n")
 	}
-
-	gologger.Info().Msgf("Started parsing massdns output\n")
-
-	err = instance.parseMassDNSOutputDir(tmpDir, shstore)
-	if err != nil {
-		return fmt.Errorf("could not parse massdns output: %w", err)
-	}
-
-	gologger.Info().Msgf("Massdns output parsing completed\n")
 
 	// Perform wildcard filtering only if domain name has been specified
 	if len(instance.options.Domains) > 0 {
@@ -152,6 +166,10 @@ func (instance *Instance) parseMassDNSOutputDir(tmpDir string, store *store.Stor
 	}
 
 	for _, tmpFile := range tmpFiles {
+		// just process stdout files
+		if !stringsutil.ContainsAnyI(tmpFile, "stdout") {
+			continue
+		}
 		err = instance.parseMassDNSOutputFile(tmpFile, store)
 		if err != nil {
 			return fmt.Errorf("could not parse massdns output: %w", err)
@@ -223,12 +241,29 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 		}
 		w = bufio.NewWriter(output)
 	}
-	buffer := &strings.Builder{}
 
 	uniqueMap := make(map[string]struct{})
 
 	// write count of resolved hosts
 	resolvedCount := 0
+
+	// if trusted resolvers are specified verify the results
+	var dnsResolver *dnsx.DNSX
+	if len(instance.options.TrustedResolvers) > 0 {
+		gologger.Info().Msgf("Trusted resolvers specified, verifying results\n")
+		options := dnsx.DefaultOptions
+		resolvers, err := wildcards.LoadResolversFromFile(instance.options.TrustedResolvers)
+		if err != nil {
+			return fmt.Errorf("could not load trusted resolvers: %w", err)
+		}
+		options.BaseResolvers = resolvers
+		dnsResolver, err = dnsx.New(options)
+		if err != nil {
+			return fmt.Errorf("could not create dns resolver: %w", err)
+		}
+	}
+
+	swg := sizedwaitgroup.New(instance.options.WildcardsThreads)
 
 	store.Iterate(func(ip string, hostnames []string, counter int) {
 		if instance.options.OnResult != nil {
@@ -242,29 +277,46 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 			}
 			uniqueMap[hostname] = struct{}{}
 
-			if instance.options.Json {
-				hostnameJson, err := json.Marshal(map[string]interface{}{"hostname": hostname})
-				if err != nil {
-					gologger.Error().Msgf("could not marshal output as json: %v", err)
+			swg.Add()
+			go func(hostname string) {
+				defer swg.Done()
+
+				if dnsResolver != nil {
+					if ips, err := dnsResolver.Lookup(hostname); err != nil || len(ips) == 0 {
+						gologger.Info().Msgf("not resolved with trusted resolver - skipping: %s", hostname)
+						return
+					} else {
+						gologger.Info().Msgf("resolved with trusted resolver: %s", hostname)
+					}
 				}
 
-				buffer.WriteString(string(hostnameJson))
-				buffer.WriteString("\n")
-			} else {
-				buffer.WriteString(hostname)
-				buffer.WriteString("\n")
-			}
+				var buffer strings.Builder
 
-			data := buffer.String()
+				if instance.options.Json {
+					hostnameJson, err := json.Marshal(map[string]interface{}{"hostname": hostname})
+					if err != nil {
+						gologger.Error().Msgf("could not marshal output as json: %v", err)
+					}
 
-			if output != nil {
-				_, _ = w.WriteString(data)
-			}
-			gologger.Silent().Msgf("%s", data)
-			buffer.Reset()
-			resolvedCount++
+					buffer.WriteString(string(hostnameJson))
+					buffer.WriteString("\n")
+				} else {
+					buffer.WriteString(hostname)
+					buffer.WriteString("\n")
+				}
+
+				data := buffer.String()
+
+				if output != nil {
+					_, _ = w.WriteString(data)
+				}
+				gologger.Silent().Msgf("%s", data)
+				resolvedCount++
+			}(hostname)
 		}
 	})
+
+	swg.Wait()
 
 	gologger.Info().Msgf("Total resolved: %d\n", resolvedCount)
 
