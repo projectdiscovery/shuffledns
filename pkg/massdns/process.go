@@ -39,7 +39,7 @@ func (instance *Instance) RunWithContext(ctx context.Context) (stdout, stderr st
 	defer stderrFile.Close()
 
 	// Run the command on a temp file and wait for the output
-	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "-t", "A", instance.options.InputFile, "-s", strconv.Itoa(instance.options.Threads)}
+	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", instance.options.InputFile, "-s", strconv.Itoa(instance.options.Threads)}
 	if instance.options.MassDnsCmd != "" {
 		args = append(args, strings.Split(instance.options.MassDnsCmd, " ")...)
 	}

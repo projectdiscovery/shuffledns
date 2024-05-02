@@ -78,7 +78,7 @@ func ParseOptions() *Options {
 	flagSet.CreateGroup("optimizations", "Optimizations",
 		flagSet.IntVar(&options.Retries, "retries", 5, "Number of retries for dns enumeration"),
 		flagSet.BoolVarP(&options.StrictWildcard, "strict-wildcard", "sw", false, "Perform wildcard check on all found subdomains"),
-		flagSet.IntVar(&options.WildcardThreads, "wt", 25, "Number of concurrent wildcard checks"),
+		flagSet.IntVar(&options.WildcardThreads, "wt", 250, "Number of concurrent wildcard checks"),
 	)
 
 	flagSet.CreateGroup("debug", "Debug",
