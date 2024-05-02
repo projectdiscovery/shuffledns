@@ -1,49 +1,38 @@
 package wildcards
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/miekg/dns"
+	"github.com/projectdiscovery/dnsx/libs/dnsx"
 	"github.com/projectdiscovery/gologger"
-	"github.com/projectdiscovery/roundrobin/transport"
 	stringsutil "github.com/projectdiscovery/utils/strings"
 	"github.com/rs/xid"
 )
 
 // Resolver represents a dns resolver for removing wildcards
 type Resolver struct {
-	servers    *transport.RoundTransport
-	domains    []string
-	maxRetries int
+	domains []string
+	client  *dnsx.DNSX
 }
 
 // NewResolver initializes and creates a new resolver to find wildcards
-func NewResolver(domains []string, retries int) (*Resolver, error) {
+func NewResolver(domains []string, retries int, resolvers []string) (*Resolver, error) {
 	resolver := &Resolver{
-		domains:    domains,
-		maxRetries: retries,
+		domains: domains,
 	}
-	return resolver, nil
-}
 
-// AddServersFromList adds the resolvers from a list of servers
-func (w *Resolver) AddServersFromList(list []string) {
-	for i := 0; i < len(list); i++ {
-		list[i] = list[i] + ":53"
-	}
-	w.servers, _ = transport.New(list...)
-}
-
-// AddServersFromFile adds the resolvers from a file to the list of servers
-func (w *Resolver) AddServersFromFile(file string) error {
-	servers, err := LoadResolversFromFile(file)
+	options := dnsx.DefaultOptions
+	options.BaseResolvers = resolvers
+	options.MaxRetries = retries
+	dnsResolver, err := dnsx.New(options)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("could not create dns resolver: %w", err)
 	}
+	resolver.client = dnsResolver
 
-	w.servers, _ = transport.New(servers...)
-
-	return nil
+	return resolver, nil
 }
 
 // LookupHost returns wildcard IP addresses of a wildcard if it's a wildcard.
@@ -86,49 +75,25 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 
 	// Iterate over all the hosts generated for rand.
 	for _, h := range hosts {
-		resolver := w.servers.Next()
-		var retryCount int
-	retry:
 		// Create a dns message and send it to the server
-		m := new(dns.Msg)
-		m.Id = dns.Id()
-		m.RecursionDesired = true
-		m.Question = make([]dns.Question, 1)
-		question := dns.Fqdn(h)
-		m.Question[0] = dns.Question{
-			Name:   question,
-			Qtype:  dns.TypeA,
-			Qclass: dns.ClassINET,
-		}
-		in, err := dns.Exchange(m, resolver)
+		in, err := w.client.QueryOne(host)
 		if err != nil {
-			if retryCount < w.maxRetries {
-				retryCount++
-				goto retry
-			}
-			// Skip the current host if there are no more retries
-			retryCount = 0
 			continue
 		}
-
 		// Skip the current host since we can't resolve it
-		if in != nil && in.Rcode != dns.RcodeSuccess {
+		if in != nil && in.StatusCodeRaw != dns.RcodeSuccess {
 			continue
 		}
 
 		// Get all the records and add them to the wildcard map
-		for _, record := range in.Answer {
-			if t, ok := record.(*dns.A); ok {
-				r := t.A.String()
+		for _, record := range in.A {
+			if host == h {
+				orig[record] = struct{}{}
+				continue
+			}
 
-				if host == h {
-					orig[r] = struct{}{}
-					continue
-				}
-
-				if _, ok := wildcards[r]; !ok {
-					wildcards[r] = struct{}{}
-				}
+			if _, ok := wildcards[record]; !ok {
+				wildcards[record] = struct{}{}
 			}
 		}
 	}

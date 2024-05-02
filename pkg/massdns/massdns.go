@@ -48,18 +48,21 @@ type Options struct {
 }
 
 func New(options Options) (*Instance, error) {
-	// Create a resolver and load resolverrs from list
-	resolver, err := wildcards.NewResolver(options.Domains, options.Retries)
-	if err != nil {
-		return nil, err
-	}
-
+	var resolvers []string
 	if options.TrustedResolvers != "" {
-		if err := resolver.AddServersFromFile(options.TrustedResolvers); err != nil {
+		var err error
+		resolvers, err = wildcards.LoadResolversFromFile(options.TrustedResolvers)
+		if err != nil {
 			return nil, err
 		}
 	} else {
-		resolver.AddServersFromList(trustedResolvers)
+		resolvers = trustedResolvers
+	}
+
+	// Create a resolver and load resolverrs from list
+	resolver, err := wildcards.NewResolver(options.Domains, options.Retries, resolvers)
+	if err != nil {
+		return nil, err
 	}
 
 	wildcardStore := wildcards.NewStore()
