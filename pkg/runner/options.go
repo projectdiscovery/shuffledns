@@ -37,6 +37,12 @@ type Options struct {
 	OnResult func(ip string, hostnames []string)
 }
 
+var DefaultOptions = Options{
+	Threads:         10000,
+	Retries:         5,
+	WildcardThreads: 250,
+}
+
 // ParseOptions parses the command line flags provided by a user
 func ParseOptions() *Options {
 	options := &Options{}
