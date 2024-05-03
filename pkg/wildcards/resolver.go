@@ -60,12 +60,10 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 	subdomainPart := strings.TrimSuffix(host, "."+domain)
 	subdomainTokens := strings.Split(subdomainPart, ".")
 
-	// Build an array by preallocating a slice of a length
-	// and create the wildcard generation prefix.
+	// create the wildcard generation prefix.
 	// We use a rand prefix at the beginning like %rand%.domain.tld
 	// A permutation is generated for each level of the subdomain.
 	var hosts []string
-	hosts = append(hosts, host)
 	hosts = append(hosts, xid.New().String()+"."+domain)
 
 	for i := 0; i < len(subdomainTokens); i++ {
@@ -76,7 +74,7 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 	// Iterate over all the hosts generated for rand.
 	for _, h := range hosts {
 		// Create a dns message and send it to the server
-		in, err := w.client.QueryOne(host)
+		in, err := w.client.QueryOne(h)
 		if err != nil {
 			continue
 		}

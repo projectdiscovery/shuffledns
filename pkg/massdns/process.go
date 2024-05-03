@@ -96,9 +96,6 @@ func (instance *Instance) Run(ctx context.Context) error {
 		gologger.Info().Msgf("Massdns execution took %s\n", took)
 
 		gologger.Info().Msgf("Started parsing massdns output\n")
-		gologger.Info().Msgf("Started parsing massdns output\n")
-
-		gologger.Info().Msgf("Started parsing massdns output\n")
 
 		now := time.Now()
 
@@ -124,7 +121,7 @@ func (instance *Instance) Run(ctx context.Context) error {
 		now := time.Now()
 		err = instance.filterWildcards(shstore)
 		if err != nil {
-			return fmt.Errorf("could not parse massdns output: %w", err)
+			return fmt.Errorf("could not filter wildcards: %w", err)
 		}
 		gologger.Info().Msgf("Wildcard removal completed in %s\n", time.Since(now))
 	}
@@ -210,6 +207,8 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 				go func(ctx context.Context, ipCancelFunc context.CancelFunc, IP string, hostname string) {
 					defer wildcardWg.Done()
 
+					gologger.Info().Msgf("Started filtering wildcards for %s\n", hostname)
+
 					select {
 					case <-ctx.Done():
 						return
@@ -217,12 +216,14 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 					}
 
 					isWildcard, ips := instance.wildcardResolver.LookupHost(hostname)
+					gologger.Debug().Msgf("isWildcard: %v, ips: %v, hostname: %s\n", isWildcard, ips, hostname)
 					if len(ips) > 0 {
 						for ip := range ips {
 							// we add the single ip to the wildcard list
 							if err := instance.wildcardStore.Set(ip); err != nil {
 								gologger.Error().Msgf("could not set wildcard ip: %s", err)
 							}
+							gologger.Debug().Msgf("Removing wildcard %s\n", ip)
 						}
 					}
 
@@ -232,6 +233,7 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 							gologger.Error().Msgf("could not set wildcard ip: %s", err)
 						}
 						ipCancelFunc()
+						gologger.Debug().Msgf("Removed wildcard %s\n", IP)
 					}
 
 				}(ipCtx, ipCancelFunc, ip, hostname)

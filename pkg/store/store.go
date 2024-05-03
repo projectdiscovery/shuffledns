@@ -64,13 +64,14 @@ func (s *Store) Delete(ip string) error {
 	return s.DB.Delete([]byte(ip), nil)
 }
 
-// Close removes all the references to arrays and releases memory to the gc
 func (s *Store) Close() {
 	s.DB.Close()
 }
 
 func (s *Store) Iterate(f func(ip string, hostnames []string, counter int)) {
 	iter := s.DB.NewIterator(nil, nil)
+	defer iter.Release()
+
 	for iter.Next() {
 		ip := string(iter.Key())
 		hostnames := strings.Split(string(iter.Value()), ",")
