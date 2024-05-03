@@ -5,6 +5,7 @@ import (
 
 	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
+	"github.com/projectdiscovery/retryabledns"
 	updateutils "github.com/projectdiscovery/utils/update"
 )
 
@@ -34,7 +35,7 @@ type Options struct {
 	DisableUpdateCheck bool                // DisableUpdateCheck disable automatic update check
 	Mode               string
 
-	OnResult func(ip string, hostnames []string)
+	OnResult func(*retryabledns.DNSData)
 }
 
 var DefaultOptions = Options{

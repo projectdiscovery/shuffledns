@@ -290,10 +290,6 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 	swg := sizedwaitgroup.New(instance.options.WildcardsThreads)
 
 	store.Iterate(func(ip string, hostnames []string, counter int) {
-		if instance.options.OnResult != nil {
-			instance.options.OnResult(ip, hostnames)
-		}
-
 		for _, hostname := range hostnames {
 			// Skip if we already printed this subdomain once
 			if _, ok := uniqueMap[hostname]; ok {
@@ -306,11 +302,15 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 				defer swg.Done()
 
 				if dnsResolver != nil {
-					if ips, err := dnsResolver.Lookup(hostname); err != nil || len(ips) == 0 {
+					if resp, err := dnsResolver.QueryOne(hostname); err != nil || len(resp.A) == 0 {
 						gologger.Info().Msgf("not resolved with trusted resolver - skipping: %s", hostname)
 						return
 					} else {
 						gologger.Info().Msgf("resolved with trusted resolver: %s", hostname)
+
+						if instance.options.OnResult != nil {
+							instance.options.OnResult(resp)
+						}
 					}
 				}
 

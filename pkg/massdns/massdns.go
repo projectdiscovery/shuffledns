@@ -1,6 +1,7 @@
 package massdns
 
 import (
+	"github.com/projectdiscovery/retryabledns"
 	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
 )
 
@@ -44,7 +45,7 @@ type Options struct {
 	// MassDnsCmd supports massdns flags
 	MassDnsCmd string
 
-	OnResult func(ip string, hostnames []string)
+	OnResult func(*retryabledns.DNSData)
 }
 
 func New(options Options) (*Instance, error) {
