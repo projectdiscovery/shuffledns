@@ -135,7 +135,7 @@ This will run the tool against subdomains in `example-subdomains.txt` and return
 You can also pass the list of subdomains at standard input (STDIN). This allows for easy integration in automation pipelines.
 
 ```bash
-subfinder -d example.com | shuffledns -d example.com -r resolvers.txt
+subfinder -d example.com | shuffledns -d example.com -r resolvers.txt -mode resolve
 ```
 
 This uses the subdomains found passively by `subfinder` and resolves them with `shuffledns` returning only the unique and valid subdomains.
@@ -145,13 +145,13 @@ This uses the subdomains found passively by `subfinder` and resolves them with `
 `shuffledns` also supports bruteforce of a target with a given wordlist. You can use the `w` flag to pass a wordlist which will be used to generate permutations that will be resolved using massdns.
 
 ```bash
-shuffledns -d hackerone.com -w wordlist.txt -r resolvers.txt
+shuffledns -d hackerone.com -w wordlist.txt -r resolvers.txt -mode bruteforce
 ```
 
 This will run the tool against `hackerone.com` with the wordlist `wordlist.txt`. The domain bruteforce can also be done with standard input as in previous example for resolving the subdomains.
 
 ```bash
-echo hackerone.com | shuffledns -w wordlist.txt -r resolvers.txt
+echo hackerone.com | shuffledns -w wordlist.txt -r resolvers.txt -mode bruteforce
 ```
 
 ---
