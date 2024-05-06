@@ -57,12 +57,15 @@ Usage:
   ./shuffledns [flags]
 
 Flags:
+Flags:
 INPUT:
-   -d, -domain string      Domain to find or resolve subdomains for
-   -l, -list string        File containing list of subdomains to resolve
-   -w, -wordlist string    File containing words to bruteforce for domain
-   -r, -resolver string    File containing list of resolvers for enumeration
-   -ri, -raw-input string  Validate raw full massdns output
+   -d, -domain string[]           Domain to find or resolve subdomains for
+   -l, -list string               File containing list of subdomains to resolve
+   -w, -wordlist string           File containing words to bruteforce for domain
+   -r, -resolver string           File containing list of resolvers for enumeration
+   -tr, -trusted-resolver string  File containing list of trusted resolvers
+   -ri, -raw-input string         Validate raw full massdns output
+   -mode string                   Execution mode (bruteforce, resolve, filter)
 
 RATE-LIMIT:
    -t int  Number of concurrent massdns resolves (default 10000)
@@ -84,7 +87,7 @@ CONFIGURATIONS:
 OPTIMIZATIONS:
    -retries int           Number of retries for dns enumeration (default 5)
    -sw, -strict-wildcard  Perform wildcard check on all found subdomains
-   -wt int                Number of concurrent wildcard checks (default 25)
+   -wt int                Number of concurrent wildcard checks (default 250)
 
 DEBUG:
    -silent         Show only subdomains in output
@@ -124,7 +127,7 @@ go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
 To resolve a list of subdomains, you can pass the list of subdomains via the `-list` option.
 
 ```bash
-shuffledns -d example.com -list example-subdomains.txt -r resolvers.txt
+shuffledns -d example.com -list example-subdomains.txt -r resolvers.txt -mode resolve
 ```
 
 This will run the tool against subdomains in `example-subdomains.txt` and returns the results. The tool uses the resolvers specified with `-r` flag to do the resolving.
