@@ -2,15 +2,18 @@ package runner
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/shuffledns/pkg/massdns"
+	fileutil "github.com/projectdiscovery/utils/file"
 	"github.com/rs/xid"
 )
 
@@ -55,25 +58,31 @@ func (r *Runner) Close() {
 // findBinary searches for massdns binary in various pre-defined paths
 // only linux and macos paths are supported rn
 func (r *Runner) findBinary() string {
-	locations := []string{
+	otherCommonLocations := []string{
 		"/usr/bin/massdns",
 		"/usr/local/bin/massdns",
 		"/data/data/com.termux/files/usr/bin/massdns",
 	}
 
-	for _, file := range locations {
-		if _, err := os.Stat(file); !os.IsNotExist(err) {
+	for _, file := range otherCommonLocations {
+		if fileutil.FileExists(file) {
 			return file
 		}
 	}
-	return ""
+
+	file, err := exec.LookPath("massdns")
+	if err != nil {
+		return ""
+	}
+
+	return file
 }
 
 // RunEnumeration sets up the input layer for giving input to massdns
 // binary and runs the actual enumeration
 func (r *Runner) RunEnumeration() {
-	// Handle a list of subdomains to resolve
-	if r.options.SubdomainsList != "" {
+	// Handle only wildcard filtering
+	if r.options.MassdnsRaw != "" {
 		r.processSubdomains()
 		return
 	}
@@ -84,20 +93,8 @@ func (r *Runner) RunEnumeration() {
 		return
 	}
 
-	// Handle stdin input
-	if r.options.Stdin {
-		// Is the stdin input a domain for bruteforce
-		if r.options.Wordlist != "" {
-			r.processDomain()
-			return
-		}
-		// Write the input from stdin to a file and resolve it.
-		r.processSubdomains()
-		return
-	}
-
-	// Handle only wildcard filtering
-	if r.options.MassdnsRaw != "" {
+	// Handle a list of subdomains to resolve
+	if r.options.SubdomainsList != "" || fileutil.HasStdin() {
 		r.processSubdomains()
 		return
 	}
@@ -132,13 +129,15 @@ func (r *Runner) processDomain() {
 		if text == "" {
 			continue
 		}
-		_, _ = writer.WriteString(text + "." + r.options.Domain + "\n")
+		for _, domain := range r.options.Domains {
+			_, _ = writer.WriteString(text + "." + domain + "\n")
+		}
 	}
 	writer.Flush()
 	inputFile.Close()
 	file.Close()
 
-	gologger.Info().Msgf("Generating permutations took %s\n", time.Since(now))
+	gologger.Info().Msgf("Generating permutations took %s at %s\n", time.Since(now), resolveFile)
 
 	// Run the actual massdns enumeration process
 	r.runMassdns(resolveFile)
@@ -149,15 +148,15 @@ func (r *Runner) processSubdomains() {
 	var resolveFile string
 
 	// If there is stdin, write the resolution list to the file
-	if r.options.Stdin && r.options.SubdomainsList == "" {
-		resolveFile = filepath.Join(r.tempDir, xid.New().String())
-		file, err := os.Create(resolveFile)
+	if fileutil.HasStdin() && r.options.SubdomainsList == "" {
+		file, err := os.CreateTemp(r.tempDir, "massdns-stdin-")
 		if err != nil {
 			gologger.Error().Msgf("Could not create resolution list (%s): %s\n", r.tempDir, err)
 			return
 		}
 		_, _ = io.Copy(file, os.Stdin)
 		file.Close()
+		resolveFile = file.Name()
 	} else {
 		// Use the file if user has provided one
 		resolveFile = r.options.SubdomainsList
@@ -169,14 +168,15 @@ func (r *Runner) processSubdomains() {
 
 // runMassdns runs the massdns tool on the list of inputs
 func (r *Runner) runMassdns(inputFile string) {
-	massdns, err := massdns.New(massdns.Config{
-		Domain:             r.options.Domain,
+	massdns, err := massdns.New(massdns.Options{
+		Domains:            r.options.Domains,
 		Retries:            r.options.Retries,
 		MassdnsPath:        r.options.MassdnsPath,
 		Threads:            r.options.Threads,
 		WildcardsThreads:   r.options.WildcardThreads,
 		InputFile:          inputFile,
 		ResolversFile:      r.options.ResolversFile,
+		TrustedResolvers:   r.options.TrustedResolvers,
 		TempDir:            r.tempDir,
 		OutputFile:         r.options.Output,
 		Json:               r.options.Json,
@@ -191,7 +191,7 @@ func (r *Runner) runMassdns(inputFile string) {
 		return
 	}
 
-	err = massdns.Process()
+	err = massdns.Run(context.Background())
 	if err != nil {
 		gologger.Error().Msgf("Could not run massdns: %s\n", err)
 	}
@@ -200,5 +200,5 @@ func (r *Runner) runMassdns(inputFile string) {
 		_ = massdns.DumpWildcardsToFile(r.options.WildcardOutputFile)
 	}
 
-	gologger.Info().Msgf("Finished resolving. Hack the Planet!\n")
+	gologger.Info().Msgf("Finished resolving.\n")
 }

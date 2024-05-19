@@ -12,9 +12,10 @@ func TestParserParseSingleIP(t *testing.T) {
 
 	var domain string
 	var ip []string
-	err := Parse(strings.NewReader(sampleData), func(Domain string, IP []string) {
+	err := ParseReader(strings.NewReader(sampleData), func(Domain string, IP []string) error {
 		domain = Domain
 		ip = IP
+		return nil
 	})
 	require.Nil(t, err, "Could not parse sample data")
 	require.Equal(t, "docs.bugbounty.com", domain, "Could not get domain")
@@ -29,9 +30,10 @@ docs.hackerone.com. A 185.199.111.152`
 
 	var domain []string
 	var ip []string
-	err := Parse(strings.NewReader(sampleData), func(Domain string, IP []string) {
+	err := ParseReader(strings.NewReader(sampleData), func(Domain string, IP []string) error {
 		domain = append(domain, Domain)
 		ip = append(ip, IP[0])
+		return nil
 	})
 	require.Nil(t, err, "Could not parse sample data")
 	require.Equal(t, []string{"docs.bugbounty.com", "docs.hackerone.com"}, domain, "Could not get domain")
@@ -48,9 +50,10 @@ hacker0x01.github.io. A 185.199.110.153`
 
 	var domain string
 	var ip []string
-	err := Parse(strings.NewReader(sampleData), func(Domain string, IP []string) {
+	err := ParseReader(strings.NewReader(sampleData), func(Domain string, IP []string) error {
 		domain = Domain
 		ip = IP
+		return nil
 	})
 	require.Nil(t, err, "Could not parse sample data")
 	require.Equal(t, "docs.hackerone.com", domain, "Could not get domain")
@@ -65,9 +68,10 @@ bugbounty-local.herokudns.io. A 185.199.111.153`
 
 	var domain string
 	var ip []string
-	err := Parse(strings.NewReader(sampleData), func(Domain string, IP []string) {
+	err := ParseReader(strings.NewReader(sampleData), func(Domain string, IP []string) error {
 		domain = Domain
 		ip = IP
+		return nil
 	})
 	require.Nil(t, err, "Could not parse sample data")
 	require.Equal(t, "docs.bugbounty.com", domain, "Could not get domain")

@@ -1,63 +1,38 @@
 package wildcards
 
 import (
-	"bufio"
-	"os"
+	"fmt"
 	"strings"
 
 	"github.com/miekg/dns"
-	"github.com/projectdiscovery/roundrobin/transport"
+	"github.com/projectdiscovery/dnsx/libs/dnsx"
+	"github.com/projectdiscovery/gologger"
+	stringsutil "github.com/projectdiscovery/utils/strings"
 	"github.com/rs/xid"
 )
 
 // Resolver represents a dns resolver for removing wildcards
 type Resolver struct {
-	// servers contains the dns servers to use
-	servers *transport.RoundTransport
-	// domain is the domain to perform enumeration on
-	domain string
-	// maxRetries is the maximum number of retries allowed
-	maxRetries int
+	domains []string
+	client  *dnsx.DNSX
 }
 
 // NewResolver initializes and creates a new resolver to find wildcards
-func NewResolver(domain string, retries int) (*Resolver, error) {
+func NewResolver(domains []string, retries int, resolvers []string) (*Resolver, error) {
 	resolver := &Resolver{
-		domain:     domain,
-		maxRetries: retries,
+		domains: domains,
 	}
-	return resolver, nil
-}
 
-// AddServersFromList adds the resolvers from a list of servers
-func (w *Resolver) AddServersFromList(list []string) {
-	for i := 0; i < len(list); i++ {
-		list[i] = list[i] + ":53"
-	}
-	w.servers, _ = transport.New(list...)
-}
-
-// AddServersFromFile adds the resolvers from a file to the list of servers
-func (w *Resolver) AddServersFromFile(file string) error {
-	f, err := os.Open(file)
+	options := dnsx.DefaultOptions
+	options.BaseResolvers = resolvers
+	options.MaxRetries = retries
+	dnsResolver, err := dnsx.New(options)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("could not create dns resolver: %w", err)
 	}
-	defer f.Close()
+	resolver.client = dnsResolver
 
-	var servers []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		text := scanner.Text()
-		if text == "" {
-			continue
-		}
-		servers = append(servers, text+":53")
-	}
-
-	w.servers, _ = transport.New(servers...)
-
-	return nil
+	return resolver, nil
 }
 
 // LookupHost returns wildcard IP addresses of a wildcard if it's a wildcard.
@@ -68,67 +43,55 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 	orig := make(map[string]struct{})
 	wildcards := make(map[string]struct{})
 
-	subdomainPart := strings.TrimSuffix(host, "."+w.domain)
+	var domain string
+	for _, domainCandidate := range w.domains {
+		if stringsutil.HasSuffixAny(host, "."+domainCandidate) {
+			domain = domainCandidate
+			break
+		}
+	}
+
+	// ignore records without domain (todo: might be interesting to detect dangling domains)
+	if domain == "" {
+		gologger.Info().Msgf("no domain found - skipping: %s", host)
+		return false, nil
+	}
+
+	subdomainPart := strings.TrimSuffix(host, "."+domain)
 	subdomainTokens := strings.Split(subdomainPart, ".")
 
-	// Build an array by preallocating a slice of a length
-	// and create the wildcard generation prefix.
+	// create the wildcard generation prefix.
 	// We use a rand prefix at the beginning like %rand%.domain.tld
 	// A permutation is generated for each level of the subdomain.
 	var hosts []string
-	hosts = append(hosts, host)
-	hosts = append(hosts, xid.New().String()+"."+w.domain)
+	hosts = append(hosts, xid.New().String()+"."+domain)
 
 	for i := 0; i < len(subdomainTokens); i++ {
-		newhost := xid.New().String() + "." + strings.Join(subdomainTokens[i:], ".") + "." + w.domain
+		newhost := xid.New().String() + "." + strings.Join(subdomainTokens[i:], ".") + "." + domain
 		hosts = append(hosts, newhost)
 	}
 
 	// Iterate over all the hosts generated for rand.
 	for _, h := range hosts {
-		resolver := w.servers.Next()
-		var retryCount int
-	retry:
 		// Create a dns message and send it to the server
-		m := new(dns.Msg)
-		m.Id = dns.Id()
-		m.RecursionDesired = true
-		m.Question = make([]dns.Question, 1)
-		question := dns.Fqdn(h)
-		m.Question[0] = dns.Question{
-			Name:   question,
-			Qtype:  dns.TypeA,
-			Qclass: dns.ClassINET,
-		}
-		in, err := dns.Exchange(m, resolver)
+		in, err := w.client.QueryOne(h)
 		if err != nil {
-			if retryCount < w.maxRetries {
-				retryCount++
-				goto retry
-			}
-			// Skip the current host if there are no more retries
-			retryCount = 0
 			continue
 		}
-
 		// Skip the current host since we can't resolve it
-		if in != nil && in.Rcode != dns.RcodeSuccess {
+		if in != nil && in.StatusCodeRaw != dns.RcodeSuccess {
 			continue
 		}
 
 		// Get all the records and add them to the wildcard map
-		for _, record := range in.Answer {
-			if t, ok := record.(*dns.A); ok {
-				r := t.A.String()
+		for _, record := range in.A {
+			if host == h {
+				orig[record] = struct{}{}
+				continue
+			}
 
-				if host == h {
-					orig[r] = struct{}{}
-					continue
-				}
-
-				if _, ok := wildcards[r]; !ok {
-					wildcards[r] = struct{}{}
-				}
+			if _, ok := wildcards[record]; !ok {
+				wildcards[record] = struct{}{}
 			}
 		}
 	}

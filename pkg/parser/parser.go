@@ -3,21 +3,25 @@ package parser
 import (
 	"bufio"
 	"io"
+	"os"
 	"strings"
 )
 
-// Callback is a callback function that is called by
-// the parser returning the results found.
-// NOTE: Callbacks are not thread safe and are blocking in nature
-// and should be used as such.
-type Callback func(domain string, ip []string)
+type OnResultFN func(domain string, ip []string) error
+
+func ParseFile(filename string, onResult OnResultFN) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return ParseReader(file, onResult)
+}
 
 // Parse parses the massdns output returning the found
-// domain and ip pair to a callback function.
-//
-// It's a pretty hacky solution. In future, it can and should
-// be rewritten to handle more edge cases and stuff.
-func Parse(reader io.Reader, callback Callback) error {
+// domain and ip pair to a onResult function.
+func ParseReader(reader io.Reader, onResult OnResultFN) error {
 	var (
 		// Some boolean various needed for state management
 		cnameStart bool
@@ -43,10 +47,11 @@ func Parse(reader io.Reader, callback Callback) error {
 		if text == "" {
 			if domain != "" {
 				cnameStart, nsStart = false, false
-				callback(domain, ip)
+				if err := onResult(domain, ip); err != nil {
+					return err
+				}
 				domain, ip = "", nil
 			}
-			continue
 		} else {
 			// Non empty line represents DNS answer section, we split on space,
 			// iterate over all the parts, and write the answer to the struct.
@@ -88,7 +93,6 @@ func Parse(reader io.Reader, callback Callback) error {
 				}
 			}
 		}
-		continue
 	}
 
 	// Return error if there was any.
@@ -99,7 +103,9 @@ func Parse(reader io.Reader, callback Callback) error {
 	// Final callback to deliver the last piece of result
 	// if there's any.
 	if domain != "" {
-		callback(domain, ip)
+		if err := onResult(domain, ip); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -1,38 +1,23 @@
 package massdns
 
 import (
-	"bufio"
-	"errors"
 	"os"
 )
 
-// IsBlankFile checks if a file is blank
-func IsBlankFile(file string) (bool, error) {
+// IsEmptyFile checks if the file is empty.
+func IsEmptyFile(file string) (bool, error) {
 	stat, err := os.Stat(file)
 	if err != nil {
-		return true, err
+		return false, err // Return false along with the error if unable to obtain file stats
 	}
-	if stat.Size() <= 1 {
-		return true, nil
-	}
-	return false, nil
+	return stat.Size() == 0, nil // Return true if the file size is 0, indicating it is empty
 }
 
-// DumpWildcardsToFile dumps the wildcard ips list to file
-func (c *Client) DumpWildcardsToFile(filename string) error {
-	if len(c.wildcardIPMap) == 0 {
-		return errors.New("no wildcards")
-	}
-	f, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+// DumpWildcardsToFile dumps the wildcard IPs list to a file.
+func (instance *Instance) DumpWildcardsToFile(filename string) error {
+	return instance.wildcardStore.SaveToFile(filename)
+}
 
-	bw := bufio.NewWriter(f)
-	for k := range c.wildcardIPMap {
-		_, _ = bw.WriteString(k + "\n")
-	}
-	defer bw.Flush()
-	return nil
+func (instance *Instance) LoadWildcardsFromFile(filename string) error {
+	return instance.wildcardStore.LoadFromFile(filename)
 }

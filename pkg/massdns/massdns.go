@@ -1,26 +1,21 @@
 package massdns
 
 import (
-	"sync"
-
-	"github.com/projectdiscovery/shuffledns/internal/store"
+	"github.com/projectdiscovery/retryabledns"
 	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
 )
 
-// Client is a client for running massdns on a target
-type Client struct {
-	config Config
+type Instance struct {
+	options Options
 
-	wildcardIPMap   map[string]struct{}
-	wildcardIPMutex *sync.RWMutex
+	wildcardStore *wildcards.Store
 
 	wildcardResolver *wildcards.Resolver
 }
 
-// Config contains configuration options for the massdns client
-type Config struct {
+type Options struct {
 	// Domain is the domain specified for enumeration
-	Domain string
+	Domains []string
 	// Retries is the number of retries for dns
 	Retries int
 	// MassdnsPath is the path to the binary
@@ -31,6 +26,8 @@ type Config struct {
 	InputFile string
 	// ResolversFile is the file with the resolvers
 	ResolversFile string
+	// TrustedResolvers is the file with the trusted resolvers
+	TrustedResolvers string
 	// TempDir is a temporary directory for storing massdns misc files
 	TempDir string
 	// OutputFile is the file to use for massdns output
@@ -48,34 +45,34 @@ type Config struct {
 	// MassDnsCmd supports massdns flags
 	MassDnsCmd string
 
-	// todo: this is redundant with the original options struct?
-	OnResult func(*store.IPMeta)
+	OnResult func(*retryabledns.DNSData)
 }
 
-// excellentResolvers contains some resolvers used in dns verification step
-var excellentResolvers = []string{
-	"1.1.1.1",
-	"1.0.0.1",
-	"8.8.8.8",
-	"8.8.4.4",
-}
+func New(options Options) (*Instance, error) {
+	var resolvers []string
+	if options.TrustedResolvers != "" {
+		var err error
+		resolvers, err = wildcards.LoadResolversFromFile(options.TrustedResolvers)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		resolvers = trustedResolvers
+	}
 
-// New returns a new massdns client for running enumeration
-// on a target.
-func New(config Config) (*Client, error) {
 	// Create a resolver and load resolverrs from list
-	resolver, err := wildcards.NewResolver(config.Domain, config.Retries)
+	resolver, err := wildcards.NewResolver(options.Domains, options.Retries, resolvers)
 	if err != nil {
 		return nil, err
 	}
 
-	resolver.AddServersFromList(excellentResolvers)
+	wildcardStore := wildcards.NewStore()
 
-	return &Client{
-		config: config,
-
-		wildcardIPMap:    make(map[string]struct{}),
-		wildcardIPMutex:  &sync.RWMutex{},
+	instance := &Instance{
+		options:          options,
+		wildcardStore:    wildcardStore,
 		wildcardResolver: resolver,
-	}, nil
+	}
+
+	return instance, nil
 }

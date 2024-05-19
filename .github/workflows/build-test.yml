@@ -1,7 +1,6 @@
 name: 🔨 Build Test
 
 on:
-  push:
   pull_request:
   workflow_dispatch:
 
@@ -22,4 +21,21 @@ jobs:
 
       - name: Build
         run: go build .
+        working-directory: cmd/shuffledns/
+
+      # Installing massdns
+      - uses: actions/checkout@v4
+        with:
+          repository: blechschmidt/massdns
+          path: ./massdns
+
+      - name: Install massdns
+        working-directory: ./massdns
+        run: |
+          make all
+          sudo make install
+        
+      # Tests
+      - name: Basic Usage
+        run: go run . -v -d scanme.sh -r ../../tests/resolvers.txt -w ../../tests/wordlist.txt -mode bruteforce
         working-directory: cmd/shuffledns/
