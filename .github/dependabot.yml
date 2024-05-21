@@ -6,16 +6,6 @@
 version: 2
 updates:
 
-  # Maintain dependencies for GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    target-branch: "dev"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-
   # Maintain dependencies for go modules
   - package-ecosystem: "gomod"
     directory: "/"
@@ -25,6 +15,22 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    labels:
+      - "Type: Maintenance"
+    allow:
+      - dependency-name: "github.com/projectdiscovery/*"
+
+  # Maintain dependencies for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "dev"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "Type: Maintenance"
 
   # Maintain dependencies for docker
   - package-ecosystem: "docker"
@@ -35,3 +41,5 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    labels:
+      - "Type: Maintenance"
