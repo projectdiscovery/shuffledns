@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/miekg/dns v1.1.59
 	github.com/projectdiscovery/dnsx v1.2.1
-	github.com/projectdiscovery/goflags v0.1.53
+	github.com/projectdiscovery/goflags v0.1.54
 	github.com/projectdiscovery/gologger v1.1.12
 	github.com/projectdiscovery/retryabledns v1.0.60
 	github.com/remeh/sizedwaitgroup v1.0.0
@@ -27,7 +27,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/projectdiscovery/utils v0.0.94
+	github.com/projectdiscovery/utils v0.1.0
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
@@ -53,6 +53,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-github/v30 v30.1.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
