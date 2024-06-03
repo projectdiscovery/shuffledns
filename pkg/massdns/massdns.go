@@ -14,6 +14,8 @@ type Instance struct {
 }
 
 type Options struct {
+	// AutoExtractRootDomains is used to extract root domains from the input list of subdomains
+	AutoExtractRootDomains bool
 	// Domain is the domain specified for enumeration
 	Domains []string
 	// Retries is the number of retries for dns

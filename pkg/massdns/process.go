@@ -20,6 +20,7 @@ import (
 	folderutil "github.com/projectdiscovery/utils/folder"
 	stringsutil "github.com/projectdiscovery/utils/strings"
 	"github.com/remeh/sizedwaitgroup"
+	"github.com/weppos/publicsuffix-go/publicsuffix"
 )
 
 // runs massdns binary with the specified options
@@ -115,6 +116,16 @@ func (instance *Instance) Run(ctx context.Context) error {
 		gologger.Info().Msgf("Massdns input parsing completed in %s\n", time.Since(now))
 	}
 
+	if instance.options.AutoExtractRootDomains {
+		gologger.Info().Msgf("Started extracting root domains\n")
+		now := time.Now()
+		err = instance.autoExtractRootDomains(shstore)
+		if err != nil {
+			return fmt.Errorf("could not extract root domains: %w", err)
+		}
+		gologger.Info().Msgf("Root domain extraction completed in %s\n", time.Since(now))
+	}
+
 	// Perform wildcard filtering only if domain name has been specified
 	if len(instance.options.Domains) > 0 {
 		gologger.Info().Msgf("Started removing wildcards records\n")
@@ -185,6 +196,31 @@ func (instance *Instance) parseMassDNSOutputDir(tmpDir string, store *store.Stor
 	return nil
 }
 
+func (instance *Instance) autoExtractRootDomains(store *store.Store) error {
+	candidateRootDomains := make(map[string]struct{})
+	store.Iterate(func(ip string, hostnames []string, counter int) {
+		for _, hostname := range hostnames {
+			rootDomain, err := publicsuffix.Domain(hostname)
+			if err != nil {
+				continue
+			}
+			candidateRootDomains[rootDomain] = struct{}{}
+		}
+	})
+
+	// add the existing ones
+	for _, domain := range instance.options.Domains {
+		candidateRootDomains[domain] = struct{}{}
+	}
+
+	instance.options.Domains = make([]string, 0)
+	for item := range candidateRootDomains {
+		instance.options.Domains = append(instance.options.Domains, item)
+	}
+
+	return nil
+}
+
 func (instance *Instance) filterWildcards(st *store.Store) error {
 	// Start to work in parallel on wildcards
 	wildcardWg := sizedwaitgroup.New(instance.options.WildcardsThreads)
@@ -216,7 +252,6 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 					}
 
 					isWildcard, ips := instance.wildcardResolver.LookupHost(hostname)
-					gologger.Debug().Msgf("isWildcard: %v, ips: %v, hostname: %s\n", isWildcard, ips, hostname)
 					if len(ips) > 0 {
 						for ip := range ips {
 							// we add the single ip to the wildcard list
