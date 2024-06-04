@@ -17,6 +17,7 @@ import (
 	"github.com/projectdiscovery/shuffledns/pkg/parser"
 	"github.com/projectdiscovery/shuffledns/pkg/store"
 	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
+	fileutil "github.com/projectdiscovery/utils/file"
 	folderutil "github.com/projectdiscovery/utils/folder"
 	stringsutil "github.com/projectdiscovery/utils/strings"
 	"github.com/remeh/sizedwaitgroup"
@@ -58,7 +59,7 @@ func (instance *Instance) Run(ctx context.Context) error {
 	}
 
 	// Check for blank input file or non-existent input file
-	blank, err := IsEmptyFile(inputFile)
+	blank, err := fileutil.IsEmpty(inputFile)
 	if err != nil {
 		return err
 	}
