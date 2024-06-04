@@ -36,6 +36,10 @@ jobs:
           sudo make install
         
       # Tests
-      - name: Basic Usage
+      - name: Bruteforce Mode Test
         run: go run . -v -d scanme.sh -r ../../tests/resolvers.txt -w ../../tests/wordlist.txt -mode bruteforce
+        working-directory: cmd/shuffledns/
+
+      - name: Resolve Mode Test
+        run: go run . -l ../../tests/subdomains.txt -v -d wrongdomain.sh -r ../../tests/resolvers.txt -mode resolve -auto-domain
         working-directory: cmd/shuffledns/
