@@ -146,6 +146,8 @@ github.com/projectdiscovery/retryabledns v1.0.62 h1:nroTEgMMfppwjwtqT5WqyfMRH8ed
 github.com/projectdiscovery/retryabledns v1.0.62/go.mod h1:K761GKlfiveUrN+byy7ManMpO3oHOIhTe3wVBWXxTSA=
 github.com/projectdiscovery/utils v0.1.2 h1:c8foFVTB4VRrivpdxX4eG6e/w5oubad94bS9VbcIL/Q=
 github.com/projectdiscovery/utils v0.1.2/go.mod h1:gny8RbNYXE55IoamF6thRDQ8tcJEw+r0FOGAvncz/oQ=
+github.com/projectdiscovery/utils v0.1.3-0.20240604121537-189e92651b6e h1:K0WQxGV5xnfwAlAIGJlEQxAAg+uvuodv+pS0L9QzgHQ=
+github.com/projectdiscovery/utils v0.1.3-0.20240604121537-189e92651b6e/go.mod h1:gny8RbNYXE55IoamF6thRDQ8tcJEw+r0FOGAvncz/oQ=
 github.com/remeh/sizedwaitgroup v1.0.0 h1:VNGGFwNo/R5+MJBf6yrsr110p0m4/OX4S3DCy7Kyl5E=
 github.com/remeh/sizedwaitgroup v1.0.0/go.mod h1:3j2R4OIe/SeS6YDhICBy22RWjJC5eNCJ1V+9+NVNYlo=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
