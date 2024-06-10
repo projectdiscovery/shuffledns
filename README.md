@@ -60,6 +60,7 @@ Flags:
 Flags:
 INPUT:
    -d, -domain string[]           Domain to find or resolve subdomains for
+   -ad, -auto-domain              Automatically extract root domains
    -l, -list string               File containing list of subdomains to resolve
    -w, -wordlist string           File containing words to bruteforce for domain
    -r, -resolver string           File containing list of resolvers for enumeration

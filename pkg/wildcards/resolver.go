@@ -1,26 +1,30 @@
 package wildcards
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/miekg/dns"
 	"github.com/projectdiscovery/dnsx/libs/dnsx"
 	"github.com/projectdiscovery/gologger"
+	sliceutil "github.com/projectdiscovery/utils/slice"
 	stringsutil "github.com/projectdiscovery/utils/strings"
 	"github.com/rs/xid"
 )
 
 // Resolver represents a dns resolver for removing wildcards
 type Resolver struct {
-	domains []string
+	Domains *sliceutil.SyncSlice[string]
 	client  *dnsx.DNSX
 }
 
 // NewResolver initializes and creates a new resolver to find wildcards
 func NewResolver(domains []string, retries int, resolvers []string) (*Resolver, error) {
+	fqdns := sliceutil.NewSyncSlice[string]()
+	fqdns.Append(domains...)
 	resolver := &Resolver{
-		domains: domains,
+		Domains: fqdns,
 	}
 
 	options := dnsx.DefaultOptions
@@ -44,12 +48,14 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 	wildcards := make(map[string]struct{})
 
 	var domain string
-	for _, domainCandidate := range w.domains {
+	w.Domains.Each(func(i int, domainCandidate string) error {
 		if stringsutil.HasSuffixAny(host, "."+domainCandidate) {
 			domain = domainCandidate
-			break
+			// just to interrupt the iteration
+			return errors.New("found domain")
 		}
-	}
+		return nil
+	})
 
 	// ignore records without domain (todo: might be interesting to detect dangling domains)
 	if domain == "" {
