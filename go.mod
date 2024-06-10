@@ -5,9 +5,9 @@ go 1.21
 require (
 	github.com/miekg/dns v1.1.59
 	github.com/projectdiscovery/dnsx v1.2.1
-	github.com/projectdiscovery/goflags v0.1.54
+	github.com/projectdiscovery/goflags v0.1.55
 	github.com/projectdiscovery/gologger v1.1.12
-	github.com/projectdiscovery/retryabledns v1.0.61
+	github.com/projectdiscovery/retryabledns v1.0.63
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.5.0
 	github.com/stretchr/testify v1.9.0
@@ -28,7 +28,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/projectdiscovery/utils v0.1.0
+	github.com/projectdiscovery/utils v0.1.3-0.20240604121537-189e92651b6e
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
@@ -72,7 +72,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/projectdiscovery/blackrock v0.0.1 // indirect
-	github.com/projectdiscovery/cdncheck v1.0.9 // indirect
+	github.com/projectdiscovery/cdncheck v1.0.11 // indirect
 	github.com/projectdiscovery/machineid v0.0.0-20240226150047-2e2c51e35983 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/shirou/gopsutil/v3 v3.23.7 // indirect
@@ -83,6 +83,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
+	github.com/weppos/publicsuffix-go v0.30.1 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yl2chen/cidranger v1.0.2 // indirect
 	github.com/yuin/goldmark v1.5.4 // indirect
