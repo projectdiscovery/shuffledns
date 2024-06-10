@@ -147,8 +147,8 @@ github.com/projectdiscovery/machineid v0.0.0-20240226150047-2e2c51e35983 h1:ZScL
 github.com/projectdiscovery/machineid v0.0.0-20240226150047-2e2c51e35983/go.mod h1:3G3BRKui7nMuDFAZKR/M2hiOLtaOmyukT20g88qRQjI=
 github.com/projectdiscovery/retryabledns v1.0.63 h1:Ijt47ybwf+iIwul606NlPKPN+ouhOYPeA9sLHVgqLG4=
 github.com/projectdiscovery/retryabledns v1.0.63/go.mod h1:lTs48OYJnMFuuBzT+3z3PrZ58K0OUBgP7Y4o3ttBwb0=
-github.com/projectdiscovery/utils v0.1.3-0.20240604121537-189e92651b6e h1:K0WQxGV5xnfwAlAIGJlEQxAAg+uvuodv+pS0L9QzgHQ=
-github.com/projectdiscovery/utils v0.1.3-0.20240604121537-189e92651b6e/go.mod h1:gny8RbNYXE55IoamF6thRDQ8tcJEw+r0FOGAvncz/oQ=
+github.com/projectdiscovery/utils v0.1.3 h1:yhHkrbYZA1eOO8e+fPDUvRMS5aUIalyM3Nab7rK4tpg=
+github.com/projectdiscovery/utils v0.1.3/go.mod h1:gny8RbNYXE55IoamF6thRDQ8tcJEw+r0FOGAvncz/oQ=
 github.com/remeh/sizedwaitgroup v1.0.0 h1:VNGGFwNo/R5+MJBf6yrsr110p0m4/OX4S3DCy7Kyl5E=
 github.com/remeh/sizedwaitgroup v1.0.0/go.mod h1:3j2R4OIe/SeS6YDhICBy22RWjJC5eNCJ1V+9+NVNYlo=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
