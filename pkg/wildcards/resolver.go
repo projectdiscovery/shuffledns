@@ -81,7 +81,7 @@ func generateWildcardPermutations(subdomain, domain string) []string {
 
 func getSyncLockMapValues(m *mapsutil.SyncLockMap[string, struct{}]) map[string]struct{} {
 	values := make(map[string]struct{})
-	m.Iterate(func(key string, value struct{}) error {
+	_ = m.Iterate(func(key string, value struct{}) error {
 		values[key] = value
 		return nil
 	})
@@ -129,8 +129,8 @@ func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}
 		//
 		// ex. *.campaigns.google.com is a wildcard so we cache it
 		// and it is used always for resolutions in future.
-		cachedValue, ok := w.wildcardAnswersCache.Get(original)
-		if ok {
+		cachedValue, cachedValueOk := w.wildcardAnswersCache.Get(original)
+		if cachedValueOk {
 			if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
 				return true, getSyncLockMapValues(cachedValue.IPS)
 			}
@@ -164,7 +164,7 @@ func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}
 			}
 		}
 
-		if cachedValue.IPS == nil {
+		if !cachedValueOk {
 			cachedValue.IPS = mapsutil.NewSyncLockMap[string, struct{}]()
 		}
 		for _, record := range in.A {
