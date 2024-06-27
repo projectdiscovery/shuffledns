@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/c2fo/testify/require"
 	"github.com/rs/xid"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_generateWildcardPermutations(t *testing.T) {
