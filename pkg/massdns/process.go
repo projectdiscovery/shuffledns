@@ -252,7 +252,7 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 					default:
 					}
 
-					isWildcard, ips := instance.wildcardResolver.LookupHost(hostname)
+					isWildcard, ips := instance.wildcardResolver.LookupHost(hostname, IP)
 					if len(ips) > 0 {
 						for ip := range ips {
 							// we add the single ip to the wildcard list
@@ -283,6 +283,12 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 		cancelFunc()
 	}
 
+	// Do a second pass as well and remove all the wildcards
+	// from the store that we have found so that everything is covered
+	allWildcardIPs := instance.wildcardResolver.GetAllWildcardIPs()
+	for ip := range allWildcardIPs {
+		_ = st.Delete(ip)
+	}
 	// drop all wildcard from the store
 	return instance.wildcardStore.Iterate(func(k string) error {
 		return st.Delete(k)
