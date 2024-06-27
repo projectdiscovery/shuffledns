@@ -3,6 +3,9 @@ package wildcards
 import (
 	"fmt"
 	"testing"
+
+	"github.com/c2fo/testify/require"
+	"github.com/rs/xid"
 )
 
 func Test_generateWildcardPermutations(t *testing.T) {
@@ -28,4 +31,37 @@ func Test_generateWildcardPermutations(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_Resolver_LookupHost(t *testing.T) {
+	resolver, err := NewResolver([]string{"google.com"}, 3, []string{
+		"8.8.8.8",
+	})
+	require.NoError(t, err)
+
+	lookupAndResolve := func(subdomain string, r *Resolver) (bool, map[string]struct{}) {
+		ips, err := r.client.Lookup(subdomain)
+		require.NoError(t, err)
+		require.NotEmpty(t, ips)
+
+		return resolver.LookupHost(subdomain, ips[0])
+	}
+	t.Run("normal", func(t *testing.T) {
+		isWildcard, wildcards := lookupAndResolve("www.google.com", resolver)
+		require.False(t, isWildcard)
+		require.Empty(t, wildcards)
+	})
+
+	t.Run("wildcard-root-domain", func(t *testing.T) {
+		isWildcard, wildcards := lookupAndResolve("campaigns.google.com", resolver)
+		require.False(t, isWildcard)
+		require.Empty(t, wildcards)
+	})
+
+	t.Run("wildcard", func(t *testing.T) {
+		isWildcard, wildcards := lookupAndResolve(xid.New().String()+".campaigns.google.com", resolver)
+		require.True(t, isWildcard)
+		require.NotEmpty(t, wildcards)
+		fmt.Printf("wildcards: %v\n", wildcards)
+	})
 }

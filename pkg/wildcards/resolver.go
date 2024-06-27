@@ -20,7 +20,11 @@ type Resolver struct {
 	client  *dnsx.DNSX
 
 	levelAnswersNormalCache *mapsutil.SyncLockMap[string, struct{}]
-	wildcardAnswersCache    *mapsutil.SyncLockMap[string, struct{}]
+	wildcardAnswersCache    *mapsutil.SyncLockMap[string, wildcardAnswerCacheValue]
+}
+
+type wildcardAnswerCacheValue struct {
+	IPS *mapsutil.SyncLockMap[string, struct{}]
 }
 
 // NewResolver initializes and creates a new resolver to find wildcards
@@ -30,7 +34,7 @@ func NewResolver(domains []string, retries int, resolvers []string) (*Resolver, 
 	resolver := &Resolver{
 		Domains:                 fqdns,
 		levelAnswersNormalCache: mapsutil.NewSyncLockMap[string, struct{}](),
-		wildcardAnswersCache:    mapsutil.NewSyncLockMap[string, struct{}](),
+		wildcardAnswersCache:    mapsutil.NewSyncLockMap[string, wildcardAnswerCacheValue](),
 	}
 
 	options := dnsx.DefaultOptions
@@ -75,20 +79,20 @@ func generateWildcardPermutations(subdomain, domain string) []string {
 	return hosts
 }
 
+func getSyncLockMapValues(m *mapsutil.SyncLockMap[string, struct{}]) map[string]struct{} {
+	values := make(map[string]struct{})
+	m.Iterate(func(key string, value struct{}) error {
+		values[key] = value
+		return nil
+	})
+	return values
+}
+
 // LookupHost returns wildcard IP addresses of a wildcard if it's a wildcard.
 // To determine, first we split the target host by dots, create permutation
 // of it's levels, check for wildcard on each one of them and if found any,
 // we remove all the hosts that have this IP from the map.
-func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
-	orig := make(map[string]struct{})
-	ips, err := w.client.QueryOne(host)
-	if err != nil {
-		return false, nil
-	}
-	for _, ip := range ips.A {
-		orig[ip] = struct{}{}
-	}
-
+func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}) {
 	wildcards := make(map[string]struct{})
 
 	var domain string
@@ -125,11 +129,11 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 		//
 		// ex. *.campaigns.google.com is a wildcard so we cache it
 		// and it is used always for resolutions in future.
-		if _, ok := w.wildcardAnswersCache.Get(original); ok {
-			for record := range orig {
-				wildcards[record] = struct{}{}
+		cachedValue, ok := w.wildcardAnswersCache.Get(original)
+		if ok {
+			if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
+				return true, getSyncLockMapValues(cachedValue.IPS)
 			}
-			return true, wildcards
 		}
 
 		// Check if this level provides a normal response
@@ -147,7 +151,6 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 		}
 		// Store this as well to be used for caching other levels
 		// so lookups don't happen as frequently.
-
 		// Skip the current host since we can't resolve it
 		if in != nil && in.StatusCodeRaw != dns.RcodeSuccess {
 			_ = w.levelAnswersNormalCache.Set(original, struct{}{})
@@ -160,16 +163,37 @@ func (w *Resolver) LookupHost(host string) (bool, map[string]struct{}) {
 				wildcards[record] = struct{}{}
 			}
 		}
-		_ = w.wildcardAnswersCache.Set(original, struct{}{})
-		break
-	}
 
-	// check if original ip are among wildcards
-	for a := range orig {
-		if _, ok := wildcards[a]; ok {
-			return true, wildcards
+		if cachedValue.IPS == nil {
+			cachedValue.IPS = mapsutil.NewSyncLockMap[string, struct{}]()
+		}
+		for _, record := range in.A {
+			_ = cachedValue.IPS.Set(record, struct{}{})
+		}
+		_ = w.wildcardAnswersCache.Set(original, cachedValue)
+		if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
+			return true, getSyncLockMapValues(cachedValue.IPS)
 		}
 	}
 
+	// check if original ip are among wildcards
+	if _, ok := wildcards[ip]; ok {
+		return true, wildcards
+	}
+
 	return false, wildcards
+}
+
+func (w *Resolver) GetAllWildcardIPs() map[string]struct{} {
+	ips := make(map[string]struct{})
+
+	_ = w.wildcardAnswersCache.Iterate(func(key string, value wildcardAnswerCacheValue) error {
+		for ip := range value.IPS.Map {
+			if _, ok := ips[ip]; !ok {
+				ips[ip] = struct{}{}
+			}
+		}
+		return nil
+	})
+	return ips
 }
