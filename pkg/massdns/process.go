@@ -302,7 +302,7 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 	var output *os.File
 	var w *bufio.Writer
 	var err error
-	var wMut = &sync.Mutex{}
+	var wMut sync.Mutex
 
 	if instance.options.OutputFile != "" {
 		output, err = os.Create(instance.options.OutputFile)
