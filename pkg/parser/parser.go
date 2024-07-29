@@ -2,9 +2,12 @@ package parser
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 type OnResultFN func(domain string, ip []string) error
@@ -34,8 +37,38 @@ func ParseReader(reader io.Reader, onResult OnResultFN) error {
 
 	// Parse the input line by line and act on what the line means
 	scanner := bufio.NewScanner(reader)
+
+	// Create a progress bar
+	var totalLines int
+	for scanner.Scan() {
+		totalLines++
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	// Reset the reader
+	readSeeker, ok := reader.(io.ReadSeeker)
+
+	if ok {
+		_, err := readSeeker.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("reader seeking error")
+	}
+
+	// Re-initialize the scanner
+	scanner = bufio.NewScanner(reader)
+	bar := progressbar.Default(int64(totalLines))
+
 	for scanner.Scan() {
 		text := scanner.Text()
+
+		// Update prograss bar
+		bar.Add(1)
 
 		// Empty line represents a seperator between DNS reply
 		// due to `-o Snl` option set in massdns. Thus it can be
