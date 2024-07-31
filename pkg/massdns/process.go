@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/projectdiscovery/dnsx/libs/dnsx"
@@ -20,6 +19,7 @@ import (
 	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
 	fileutil "github.com/projectdiscovery/utils/file"
 	folderutil "github.com/projectdiscovery/utils/folder"
+	ioutil "github.com/projectdiscovery/utils/io"
 	stringsutil "github.com/projectdiscovery/utils/strings"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/weppos/publicsuffix-go/publicsuffix"
@@ -299,10 +299,10 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 func (instance *Instance) writeOutput(store *store.Store) error {
 	// Write the unique deduplicated output to the file or stdout
 	// depending on what the user has asked.
-	var output *os.File
-	var w *bufio.Writer
 	var err error
-	var wMut sync.Mutex
+	var output *os.File
+	var safeWriter *ioutil.SafeWriter
+	var w *bufio.Writer
 
 	if instance.options.OutputFile != "" {
 		output, err = os.Create(instance.options.OutputFile)
@@ -310,6 +310,10 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 			return fmt.Errorf("could not create massdns output file: %v", err)
 		}
 		w = bufio.NewWriter(output)
+		safeWriter, err = ioutil.NewSafeWriter(w)
+		if err != nil {
+			return fmt.Errorf("could not create safe writer: %v", err)
+		}
 	}
 
 	uniqueMap := make(map[string]struct{})
@@ -378,9 +382,7 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 				data := buffer.String()
 
 				if output != nil {
-					wMut.Lock()
-					_, _ = w.WriteString(data)
-					wMut.Unlock()
+					_, _ = safeWriter.Write([]byte(data))
 				}
 				gologger.Silent().Msgf("%s", data)
 				resolvedCount++
