@@ -1,4 +1,4 @@
-FROM golang:1.22.6-alpine as build-env
+FROM golang:1.23.0-alpine as build-env
 RUN apk --no-cache add git
 RUN go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
 
