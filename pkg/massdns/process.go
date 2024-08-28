@@ -152,20 +152,24 @@ func (instance *Instance) Run(ctx context.Context) error {
 }
 
 func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
-	// at first we need the full structure in memory to elaborate it in parallell
-	err := parser.ParseFile(tmpFile, func(domain string, ip []string) error {
-		for _, ip := range ip {
-			// Check if ip exists in the store. If not,
-			// add the ip to the map and continue with the next ip.
-			if !store.Exists(ip) {
-				if err := store.New(ip, domain); err != nil {
-					return fmt.Errorf("could not create new record: %w", err)
-				}
-				continue
-			}
+	ipMap := make(map[string][]string)
+	const maxDomains = 10000
 
-			if err := store.Update(ip, domain); err != nil {
-				return fmt.Errorf("could not update record: %w", err)
+	flushToDisk := func(ip string, domains []string) error {
+		if err := store.Append(ip, domains...); err != nil {
+			return fmt.Errorf("could not update record: %w", err)
+		}
+		return nil
+	}
+
+	err := parser.ParseFile(tmpFile, func(domain string, ips []string) error {
+		for _, ip := range ips {
+			ipMap[ip] = append(ipMap[ip], domain)
+			if len(ipMap[ip]) >= maxDomains {
+				if err := flushToDisk(ip, ipMap[ip]); err != nil {
+					return err
+				}
+				ipMap[ip] = nil // Clear the slice
 			}
 		}
 		return nil
@@ -173,6 +177,13 @@ func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.St
 
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
+	}
+
+	// Flush remaining entries to disk
+	for ip, domains := range ipMap {
+		if err := flushToDisk(ip, domains); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -260,7 +271,7 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 							if err := instance.wildcardStore.Set(ip); err != nil {
 								gologger.Error().Msgf("could not set wildcard ip: %s", err)
 							}
-							gologger.Debug().Msgf("Removing wildcard %s\n", ip)
+							gologger.Info().Msgf("Removing wildcard %s\n", ip)
 						}
 					}
 
@@ -270,7 +281,7 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 							gologger.Error().Msgf("could not set wildcard ip: %s", err)
 						}
 						ipCancelFunc()
-						gologger.Debug().Msgf("Removed wildcard %s\n", IP)
+						gologger.Info().Msgf("Removed wildcard %s\n", IP)
 					}
 
 				}(ipCtx, ipCancelFunc, ip, hostname)

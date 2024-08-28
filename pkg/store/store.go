@@ -51,12 +51,13 @@ func (s *Store) GetHostnames(ip string) string {
 	return string(hostname)
 }
 
-func (s *Store) Update(ip, hostname string) error {
-	hostnames, err := s.DB.Get([]byte(ip), nil)
-	if err != nil {
-		return err
+func (s *Store) Append(ip string, hostnames ...string) error {
+	existingHostnames, _ := s.DB.Get([]byte(ip), nil)
+	if len(existingHostnames) > 0 {
+		hostnames = append(hostnames, string(existingHostnames))
 	}
-	return s.DB.Put([]byte(ip), []byte(string(hostnames)+","+hostname), nil)
+
+	return s.DB.Put([]byte(ip), []byte(strings.Join(hostnames, ",")), nil)
 }
 
 // Delete deletes the records for an IP from store.
