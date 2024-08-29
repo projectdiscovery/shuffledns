@@ -360,11 +360,6 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 		}
 	}
 
-	instance.wildcardStore.Iterate(func(ip string) error {
-		gologger.Info().Msgf("wildcard ip: %s", ip)
-		return nil
-	})
-
 	swg := sizedwaitgroup.New(instance.options.WildcardsThreads)
 
 	store.Iterate(func(ip string, hostnames []string, counter int) {
