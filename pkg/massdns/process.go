@@ -17,6 +17,7 @@ import (
 	"github.com/projectdiscovery/shuffledns/pkg/parser"
 	"github.com/projectdiscovery/shuffledns/pkg/store"
 	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
+	"github.com/projectdiscovery/utils/batcher"
 	fileutil "github.com/projectdiscovery/utils/file"
 	folderutil "github.com/projectdiscovery/utils/folder"
 	ioutil "github.com/projectdiscovery/utils/io"
@@ -151,25 +152,47 @@ func (instance *Instance) Run(ctx context.Context) error {
 	return nil
 }
 
-func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
-	// at first we need the full structure in memory to elaborate it in parallell
-	err := parser.ParseFile(tmpFile, func(domain string, ip []string) error {
-		for _, ip := range ip {
-			// Check if ip exists in the store. If not,
-			// add the ip to the map and continue with the next ip.
-			if !store.Exists(ip) {
-				if err := store.New(ip, domain); err != nil {
-					return fmt.Errorf("could not create new record: %w", err)
-				}
-				continue
-			}
+type item struct {
+	ip     string
+	domain string
+}
 
-			if err := store.Update(ip, domain); err != nil {
-				return fmt.Errorf("could not update record: %w", err)
+func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
+	flushToDisk := func(ip string, domains []string) error {
+		if err := store.Append(ip, domains...); err != nil {
+			return fmt.Errorf("could not update record: %w", err)
+		}
+		return nil
+	}
+
+	bulkWriter := batcher.New[item](
+		batcher.WithMaxCapacity[item](10000),
+		batcher.WithFlushInterval[item](10*time.Second),
+		batcher.WithFlushCallback[item](func(items []item) {
+			ipMap := make(map[string][]string)
+			for _, item := range items {
+				ipMap[item.ip] = append(ipMap[item.ip], item.domain)
 			}
+			for ip, domains := range ipMap {
+				if err := flushToDisk(ip, domains); err != nil {
+					gologger.Fatal().Msgf("could not update record: %s", err)
+				}
+			}
+		}),
+	)
+
+	bulkWriter.Run()
+
+	err := parser.ParseFile(tmpFile, func(domain string, ips []string) error {
+		for _, ip := range ips {
+			bulkWriter.Append(item{ip: ip, domain: domain})
 		}
 		return nil
 	})
+
+	bulkWriter.Stop()
+
+	bulkWriter.WaitDone()
 
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
@@ -260,7 +283,7 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 							if err := instance.wildcardStore.Set(ip); err != nil {
 								gologger.Error().Msgf("could not set wildcard ip: %s", err)
 							}
-							gologger.Debug().Msgf("Removing wildcard %s\n", ip)
+							gologger.Info().Msgf("Removing wildcard %s\n", ip)
 						}
 					}
 
@@ -270,7 +293,7 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 							gologger.Error().Msgf("could not set wildcard ip: %s", err)
 						}
 						ipCancelFunc()
-						gologger.Debug().Msgf("Removed wildcard %s\n", IP)
+						gologger.Info().Msgf("Removed wildcard %s\n", IP)
 					}
 
 				}(ipCtx, ipCancelFunc, ip, hostname)
@@ -356,6 +379,14 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 						gologger.Info().Msgf("not resolved with trusted resolver - skipping: %s", hostname)
 						return
 					} else {
+						// perform a last check on wildcards ip in case some hosts sneaked due to bad resolvers
+						for _, ip := range resp.A {
+							if instance.wildcardStore.Has(ip) {
+								gologger.Info().Msgf("resolved with trusted resolver but is a wildcard - skipping: %s", hostname)
+								return
+							}
+						}
+
 						gologger.Info().Msgf("resolved with trusted resolver: %s", hostname)
 
 						if instance.options.OnResult != nil {
