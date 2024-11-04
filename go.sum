@@ -157,8 +157,8 @@ github.com/projectdiscovery/gologger v1.1.30 h1:Qc3tYcDwl7nh0IVotctAeXurp12sf+PQ
 github.com/projectdiscovery/gologger v1.1.30/go.mod h1:XCNafm7f4TSOX8pgowmO4RQYNdL3qFFejPN/BBzxXPo=
 github.com/projectdiscovery/machineid v0.0.0-20240226150047-2e2c51e35983 h1:ZScLodGSezQVwsQDtBSMFp72WDq0nNN+KE/5DHKY5QE=
 github.com/projectdiscovery/machineid v0.0.0-20240226150047-2e2c51e35983/go.mod h1:3G3BRKui7nMuDFAZKR/M2hiOLtaOmyukT20g88qRQjI=
-github.com/projectdiscovery/retryabledns v1.0.82 h1:mB8Xwfo1BN4i5Emr9biBTJcYLgRv0UgLQfwtAl4sMX0=
-github.com/projectdiscovery/retryabledns v1.0.82/go.mod h1:K0swjyX7/q/jPFMAN0TeB2TOn2PXA9mtVhrDfCQsgSg=
+github.com/projectdiscovery/retryabledns v1.0.83 h1:qevo2GBDr/BSSb5W9PxudXhu477uOz1mH1Kk0maGfVY=
+github.com/projectdiscovery/retryabledns v1.0.83/go.mod h1:t9DWqUdr3wdc1iIuAozefhDpPfIqDnu0q9BpJO4Mq5M=
 github.com/projectdiscovery/utils v0.2.17 h1:zRlZN/21TXURWO7FenQGRBzkT9ziz+/nPuZ7wd84IPM=
 github.com/projectdiscovery/utils v0.2.17/go.mod h1:reZl7z57TfuBKfLUaPFcri0tqbqwjujyFDqd+yxq5gk=
 github.com/remeh/sizedwaitgroup v1.0.0 h1:VNGGFwNo/R5+MJBf6yrsr110p0m4/OX4S3DCy7Kyl5E=
