@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/miekg/dns v1.1.59
 	github.com/projectdiscovery/dnsx v1.2.1
-	github.com/projectdiscovery/goflags v0.1.67
+	github.com/projectdiscovery/goflags v0.1.68
 	github.com/projectdiscovery/gologger v1.1.40
 	github.com/projectdiscovery/retryabledns v1.0.93
 	github.com/remeh/sizedwaitgroup v1.0.0
@@ -31,7 +31,7 @@ require (
 	github.com/projectdiscovery/utils v0.4.6
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.29.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
