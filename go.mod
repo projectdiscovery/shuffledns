@@ -7,7 +7,7 @@ require (
 	github.com/projectdiscovery/dnsx v1.2.1
 	github.com/projectdiscovery/goflags v0.1.68
 	github.com/projectdiscovery/gologger v1.1.41
-	github.com/projectdiscovery/retryabledns v1.0.93
+	github.com/projectdiscovery/retryabledns v1.0.94
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.5.0
 	github.com/stretchr/testify v1.9.0
