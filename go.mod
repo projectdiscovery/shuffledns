@@ -6,7 +6,7 @@ require (
 	github.com/miekg/dns v1.1.59
 	github.com/projectdiscovery/dnsx v1.2.2
 	github.com/projectdiscovery/goflags v0.1.74
-	github.com/projectdiscovery/gologger v1.1.47
+	github.com/projectdiscovery/gologger v1.1.48
 	github.com/projectdiscovery/retryabledns v1.0.94
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.5.0
