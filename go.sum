@@ -231,8 +231,8 @@ github.com/projectdiscovery/machineid v0.0.0-20240226150047-2e2c51e35983 h1:ZScL
 github.com/projectdiscovery/machineid v0.0.0-20240226150047-2e2c51e35983/go.mod h1:3G3BRKui7nMuDFAZKR/M2hiOLtaOmyukT20g88qRQjI=
 github.com/projectdiscovery/retryabledns v1.0.101 h1:8DIVD8CL34Lc9h6KeOopPUfsPlcFxMlrnKOaI9VeOMk=
 github.com/projectdiscovery/retryabledns v1.0.101/go.mod h1:fQI91PKUyTZYL2pYloyA9Bh3Bq8IgOB6X+bN+8Xm14I=
-github.com/projectdiscovery/utils v0.4.19 h1:rWOOTWUMQK9gvgH01rrw0qFi0hrh712hM1pCUzapCqA=
-github.com/projectdiscovery/utils v0.4.19/go.mod h1:y5gnpQn802iEWqf0djTRNskJlS62P5eqe1VS1+ah0tk=
+github.com/projectdiscovery/utils v0.4.20 h1:7Fmjb+4YZJSzn7bL21sjF3wAR53eSi7VdAfDkDBUUwY=
+github.com/projectdiscovery/utils v0.4.20/go.mod h1:RnC23+hI8j4drZFHQpMX92hV9++9d/yBeNr1pzcbF7Y=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/remeh/sizedwaitgroup v1.0.0 h1:VNGGFwNo/R5+MJBf6yrsr110p0m4/OX4S3DCy7Kyl5E=
 github.com/remeh/sizedwaitgroup v1.0.0/go.mod h1:3j2R4OIe/SeS6YDhICBy22RWjJC5eNCJ1V+9+NVNYlo=
