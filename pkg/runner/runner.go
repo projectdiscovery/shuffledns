@@ -186,6 +186,7 @@ func (r *Runner) runMassdns(inputFile string) {
 		WildcardOutputFile:     r.options.WildcardOutputFile,
 		MassDnsCmd:             r.options.MassDnsCmd,
 		KeepStderr:             r.options.KeepStderr,
+		BatchSize:              r.options.BatchSize,
 		OnResult:               r.options.OnResult,
 	})
 	if err != nil {

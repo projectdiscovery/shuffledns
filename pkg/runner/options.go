@@ -36,6 +36,7 @@ type Options struct {
 	DisableUpdateCheck     bool                // DisableUpdateCheck disable automatic update check
 	Mode                   string
 	KeepStderr             bool // KeepStderr controls whether to capture and store massdns stderr output
+	BatchSize              int  // BatchSize controls the number of lines per chunk for incremental processing
 
 	OnResult func(*retryabledns.DNSData)
 }
@@ -44,6 +45,7 @@ var DefaultOptions = Options{
 	Threads:         10000,
 	Retries:         5,
 	WildcardThreads: 250,
+	BatchSize:       50000, // Default batch size for incremental processing
 }
 
 // ParseOptions parses the command line flags provided by a user
@@ -90,6 +92,7 @@ func ParseOptions() *Options {
 		flagSet.BoolVarP(&options.StrictWildcard, "strict-wildcard", "sw", false, "Perform wildcard check on all found subdomains"),
 		flagSet.IntVar(&options.WildcardThreads, "wt", 250, "Number of concurrent wildcard checks"),
 		flagSet.BoolVar(&options.KeepStderr, "retain-stderr", false, "Capture and store massdns stderr output (default: discard)"),
+		flagSet.IntVar(&options.BatchSize, "batch-size", 50000, "Number of lines per chunk for incremental processing"),
 	)
 
 	flagSet.CreateGroup("debug", "Debug",

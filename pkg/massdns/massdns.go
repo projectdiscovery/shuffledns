@@ -48,6 +48,8 @@ type Options struct {
 	MassDnsCmd string
 	// KeepStderr controls whether to capture and store massdns stderr output
 	KeepStderr bool
+	// BatchSize controls the number of lines per chunk for incremental processing
+	BatchSize int
 
 	OnResult func(*retryabledns.DNSData)
 }

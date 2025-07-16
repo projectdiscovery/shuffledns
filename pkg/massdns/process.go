@@ -104,9 +104,6 @@ func (instance *Instance) Run(ctx context.Context) error {
 	}
 	defer shstore.Close()
 
-	// Set the correct target file
-	tmpDir := instance.options.TempDir
-
 	// Check if we need to run massdns
 	if instance.options.MassdnsRaw == "" {
 		if len(instance.options.Domains) > 0 {
@@ -115,31 +112,19 @@ func (instance *Instance) Run(ctx context.Context) error {
 			gologger.Info().Msgf("Executing massdns\n")
 		}
 
-		// Create a temporary file for the massdns output
-		gologger.Info().Msgf("using massdns output directory: %s\n", tmpDir)
-		stdoutFile, stderrFile, took, err := instance.RunWithContext(ctx)
-		gologger.Info().Msgf("massdns output file: %s\n", stdoutFile)
-		if stderrFile != "" {
-			gologger.Info().Msgf("massdns error file: %s\n", stderrFile)
+		// Use incremental processing for large inputs
+		if instance.options.BatchSize > 0 {
+			gologger.Info().Msgf("Using incremental processing with batch size: %d\n", instance.options.BatchSize)
+			err = instance.processIncremental(ctx, inputFile, shstore)
 		} else {
-			gologger.Info().Msgf("massdns stderr discarded (KeepStderr=false)\n")
+			// Fallback to original single massdns run
+			gologger.Info().Msgf("Using single massdns run\n")
+			err = instance.processSingle(ctx, shstore)
 		}
+
 		if err != nil {
-			return fmt.Errorf("could not execute massdns: %s", err)
+			return fmt.Errorf("could not execute massdns: %w", err)
 		}
-
-		gologger.Info().Msgf("Massdns execution took %s\n", took)
-
-		gologger.Info().Msgf("Started parsing massdns output\n")
-
-		now := time.Now()
-
-		err = instance.parseMassDNSOutputDir(tmpDir, shstore)
-		if err != nil {
-			return fmt.Errorf("could not parse massdns output: %w", err)
-		}
-
-		gologger.Info().Msgf("Massdns output parsing completed in %s\n", time.Since(now))
 	} else { // parse the input file
 		gologger.Info().Msgf("Started parsing massdns input\n")
 		now := time.Now()
@@ -181,6 +166,221 @@ func (instance *Instance) Run(ctx context.Context) error {
 	}
 	gologger.Info().Msgf("Output written in %s\n", time.Since(now))
 	return nil
+}
+
+// processSingle runs massdns on the entire input file (original behavior)
+func (instance *Instance) processSingle(ctx context.Context, shstore *store.Store) error {
+	// Create a temporary file for the massdns output
+	gologger.Info().Msgf("using massdns output directory: %s\n", instance.options.TempDir)
+	stdoutFile, stderrFile, took, err := instance.RunWithContext(ctx)
+	gologger.Info().Msgf("massdns output file: %s\n", stdoutFile)
+	if stderrFile != "" {
+		gologger.Info().Msgf("massdns error file: %s\n", stderrFile)
+	} else {
+		gologger.Info().Msgf("massdns stderr discarded (KeepStderr=false)\n")
+	}
+	if err != nil {
+		return fmt.Errorf("could not execute massdns: %s", err)
+	}
+
+	gologger.Info().Msgf("Massdns execution took %s\n", took)
+
+	gologger.Info().Msgf("Started parsing massdns output\n")
+
+	now := time.Now()
+
+	err = instance.parseMassDNSOutputDir(instance.options.TempDir, shstore)
+	if err != nil {
+		return fmt.Errorf("could not parse massdns output: %w", err)
+	}
+
+	gologger.Info().Msgf("Massdns output parsing completed in %s\n", time.Since(now))
+	return nil
+}
+
+// processIncremental processes input in chunks for better memory and disk usage
+func (instance *Instance) processIncremental(ctx context.Context, inputFile string, shstore *store.Store) error {
+	// Count total lines to estimate progress
+	totalLines, err := instance.countLines(inputFile)
+	if err != nil {
+		return fmt.Errorf("could not count input lines: %w", err)
+	}
+
+	gologger.Info().Msgf("Total input lines: %d\n", totalLines)
+
+	// Create chunks and process them sequentially
+	chunkNum := 0
+	processedLines := 0
+
+	for {
+		chunkNum++
+		chunkFile, linesInChunk, err := instance.createChunk(inputFile, chunkNum, processedLines)
+		if err != nil {
+			return fmt.Errorf("could not create chunk %d: %w", chunkNum, err)
+		}
+
+		// If no lines in chunk, we're done
+		if linesInChunk == 0 {
+			break
+		}
+
+		gologger.Info().Msgf("Processing chunk %d (%d lines, %.1f%% complete)\n",
+			chunkNum, linesInChunk, float64(processedLines+linesInChunk)/float64(totalLines)*100)
+
+		// Run massdns on this chunk
+		chunkStart := time.Now()
+		stdoutFile, stderrFile, took, err := instance.runChunk(ctx, chunkFile)
+		if err != nil {
+			// Clean up chunk file even on error
+			_ = os.Remove(chunkFile)
+			return fmt.Errorf("could not execute massdns on chunk %d: %w", chunkNum, err)
+		}
+
+		gologger.Info().Msgf("Chunk %d massdns execution took %s\n", chunkNum, took)
+
+		// Parse the chunk output immediately
+		parseStart := time.Now()
+		err = instance.parseMassDNSOutputFile(stdoutFile, shstore)
+		if err != nil {
+			// Clean up files even on error
+			_ = os.Remove(chunkFile)
+			_ = os.Remove(stdoutFile)
+			if stderrFile != "" {
+				_ = os.Remove(stderrFile)
+			}
+			return fmt.Errorf("could not parse massdns output for chunk %d: %w", chunkNum, err)
+		}
+
+		gologger.Info().Msgf("Chunk %d parsing completed in %s\n", chunkNum, time.Since(parseStart))
+
+		// Clean up chunk files immediately
+		_ = os.Remove(chunkFile)
+		_ = os.Remove(stdoutFile)
+		if stderrFile != "" {
+			_ = os.Remove(stderrFile)
+		}
+
+		processedLines += linesInChunk
+		gologger.Info().Msgf("Chunk %d completed in %s\n", chunkNum, time.Since(chunkStart))
+	}
+
+	gologger.Info().Msgf("All chunks processed successfully (%d total chunks)\n", chunkNum-1)
+	return nil
+}
+
+// countLines counts the number of lines in a file
+func (instance *Instance) countLines(filename string) (int, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	count := 0
+	for scanner.Scan() {
+		count++
+	}
+	return count, scanner.Err()
+}
+
+// createChunk creates a chunk file with the specified number of lines
+func (instance *Instance) createChunk(inputFile string, chunkNum, startLine int) (string, int, error) {
+	// Create chunk file
+	chunkFile, err := os.CreateTemp(instance.options.TempDir, fmt.Sprintf("chunk-%d-", chunkNum))
+	if err != nil {
+		return "", 0, fmt.Errorf("could not create chunk file: %w", err)
+	}
+	defer chunkFile.Close()
+
+	// Open input file
+	input, err := os.Open(inputFile)
+	if err != nil {
+		_ = os.Remove(chunkFile.Name())
+		return "", 0, fmt.Errorf("could not open input file: %w", err)
+	}
+	defer input.Close()
+
+	scanner := bufio.NewScanner(input)
+	writer := bufio.NewWriter(chunkFile)
+
+	// Skip to start line
+	for i := 0; i < startLine; i++ {
+		if !scanner.Scan() {
+			break
+		}
+	}
+
+	// Write chunk lines
+	linesInChunk := 0
+	for i := 0; i < instance.options.BatchSize && scanner.Scan(); i++ {
+		_, err := writer.WriteString(scanner.Text() + "\n")
+		if err != nil {
+			_ = os.Remove(chunkFile.Name())
+			return "", 0, fmt.Errorf("could not write to chunk file: %w", err)
+		}
+		linesInChunk++
+	}
+
+	if err := writer.Flush(); err != nil {
+		_ = os.Remove(chunkFile.Name())
+		return "", 0, fmt.Errorf("could not flush chunk file: %w", err)
+	}
+
+	return chunkFile.Name(), linesInChunk, nil
+}
+
+// runChunk runs massdns on a specific chunk file
+func (instance *Instance) runChunk(ctx context.Context, chunkFile string) (stdout, stderr string, took time.Duration, err error) {
+	start := time.Now()
+
+	// Create temporary file for massdns output
+	stdoutFile, err := os.CreateTemp(instance.options.TempDir, "massdns-chunk-stdout-")
+	if err != nil {
+		return "", "", 0, fmt.Errorf("could not create temp file for massdns output: %w", err)
+	}
+	defer func() {
+		_ = stdoutFile.Close()
+	}()
+
+	// Handle stderr based on KeepStderr option
+	var stderrFile *os.File
+	if instance.options.KeepStderr {
+		stderrFile, err = os.CreateTemp(instance.options.TempDir, "massdns-chunk-stderr-")
+		if err != nil {
+			return "", "", 0, fmt.Errorf("could not create temp file for massdns stderr: %w", err)
+		}
+		defer func() {
+			_ = stderrFile.Close()
+		}()
+	}
+
+	// Run the command on the chunk file
+	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", chunkFile, "-s", strconv.Itoa(instance.options.Threads)}
+	if instance.options.MassDnsCmd != "" {
+		args = append(args, strings.Split(instance.options.MassDnsCmd, " ")...)
+	}
+
+	cmd := exec.CommandContext(ctx, instance.options.MassdnsPath, args...)
+	cmd.Stdout = stdoutFile
+
+	// Set stderr based on KeepStderr option
+	if instance.options.KeepStderr {
+		cmd.Stderr = stderrFile
+	} else {
+		// Discard stderr by sending it to /dev/null
+		cmd.Stderr = nil
+	}
+
+	err = cmd.Run()
+
+	// Return stderr filename only if it was captured
+	stderrFilename := ""
+	if instance.options.KeepStderr {
+		stderrFilename = stderrFile.Name()
+	}
+
+	return stdoutFile.Name(), stderrFilename, time.Since(start), err
 }
 
 type item struct {
