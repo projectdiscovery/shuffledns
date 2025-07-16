@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -30,32 +31,54 @@ import (
 func (instance *Instance) RunWithContext(ctx context.Context) (stdout, stderr string, took time.Duration, err error) {
 	start := time.Now()
 
+	// Create temporary file for massdns output
 	stdoutFile, err := os.CreateTemp(instance.options.TempDir, "massdns-stdout-")
 	if err != nil {
-		return "", "", 0, fmt.Errorf("could not create temp file for massdns stdout: %w", err)
+		return "", "", 0, fmt.Errorf("could not create temp file for massdns output: %w", err)
 	}
 	defer func() {
 		_ = stdoutFile.Close()
 	}()
 
-	stderrFile, err := os.CreateTemp(instance.options.TempDir, "massdns-stderr-")
-	if err != nil {
-		return "", "", 0, fmt.Errorf("could not create temp file for massdns stdout: %w", err)
+	// Handle stderr based on KeepStderr option
+	var stderrFile *os.File
+	if instance.options.KeepStderr {
+		stderrFile, err = os.CreateTemp(instance.options.TempDir, "massdns-stderr-")
+		if err != nil {
+			return "", "", 0, fmt.Errorf("could not create temp file for massdns stderr: %w", err)
+		}
+		defer func() {
+			_ = stderrFile.Close()
+		}()
 	}
-	defer func() {
-		_ = stderrFile.Close()
-	}()
 
 	// Run the command on a temp file and wait for the output
 	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", instance.options.InputFile, "-s", strconv.Itoa(instance.options.Threads)}
 	if instance.options.MassDnsCmd != "" {
 		args = append(args, strings.Split(instance.options.MassDnsCmd, " ")...)
 	}
+
+	log.Fatalf("flag: %s %s", instance.options.MassdnsPath, strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, instance.options.MassdnsPath, args...)
 	cmd.Stdout = stdoutFile
-	cmd.Stderr = stderrFile
+
+	// Set stderr based on KeepStderr option
+	if instance.options.KeepStderr {
+		cmd.Stderr = stderrFile
+	} else {
+		// Discard stderr by sending it to /dev/null
+		cmd.Stderr = nil
+	}
+
 	err = cmd.Run()
-	return stdoutFile.Name(), stderrFile.Name(), time.Since(start), err
+
+	// Return stderr filename only if it was captured
+	stderrFilename := ""
+	if instance.options.KeepStderr {
+		stderrFilename = stderrFile.Name()
+	}
+
+	return stdoutFile.Name(), stderrFilename, time.Since(start), err
 }
 
 func (instance *Instance) Run(ctx context.Context) error {
@@ -96,7 +119,11 @@ func (instance *Instance) Run(ctx context.Context) error {
 		gologger.Info().Msgf("using massdns output directory: %s\n", tmpDir)
 		stdoutFile, stderrFile, took, err := instance.RunWithContext(ctx)
 		gologger.Info().Msgf("massdns output file: %s\n", stdoutFile)
-		gologger.Info().Msgf("massdns error file: %s\n", stderrFile)
+		if stderrFile != "" {
+			gologger.Info().Msgf("massdns error file: %s\n", stderrFile)
+		} else {
+			gologger.Info().Msgf("massdns stderr discarded (KeepStderr=false)\n")
+		}
 		if err != nil {
 			return fmt.Errorf("could not execute massdns: %s", err)
 		}

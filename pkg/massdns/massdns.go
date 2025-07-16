@@ -46,6 +46,8 @@ type Options struct {
 	WildcardOutputFile string
 	// MassDnsCmd supports massdns flags
 	MassDnsCmd string
+	// KeepStderr controls whether to capture and store massdns stderr output
+	KeepStderr bool
 
 	OnResult func(*retryabledns.DNSData)
 }

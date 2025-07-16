@@ -35,6 +35,7 @@ type Options struct {
 	MassDnsCmd             string              // Supports massdns flags(example -i)
 	DisableUpdateCheck     bool                // DisableUpdateCheck disable automatic update check
 	Mode                   string
+	KeepStderr             bool // KeepStderr controls whether to capture and store massdns stderr output
 
 	OnResult func(*retryabledns.DNSData)
 }
@@ -88,6 +89,7 @@ func ParseOptions() *Options {
 		flagSet.IntVar(&options.Retries, "retries", 5, "Number of retries for dns enumeration"),
 		flagSet.BoolVarP(&options.StrictWildcard, "strict-wildcard", "sw", false, "Perform wildcard check on all found subdomains"),
 		flagSet.IntVar(&options.WildcardThreads, "wt", 250, "Number of concurrent wildcard checks"),
+		flagSet.BoolVar(&options.KeepStderr, "retain-stderr", false, "Capture and store massdns stderr output (default: discard)"),
 	)
 
 	flagSet.CreateGroup("debug", "Debug",
