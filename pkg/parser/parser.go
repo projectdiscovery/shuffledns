@@ -14,7 +14,9 @@ func ParseFile(filename string, onResult OnResultFN) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	return ParseReader(file, onResult)
 }

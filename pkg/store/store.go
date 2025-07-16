@@ -66,7 +66,7 @@ func (s *Store) Delete(ip string) error {
 }
 
 func (s *Store) Close() {
-	s.DB.Close()
+	_ = s.DB.Close()
 }
 
 func (s *Store) Iterate(f func(ip string, hostnames []string, counter int)) {
