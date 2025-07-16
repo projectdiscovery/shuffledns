@@ -34,13 +34,17 @@ func (instance *Instance) RunWithContext(ctx context.Context) (stdout, stderr st
 	if err != nil {
 		return "", "", 0, fmt.Errorf("could not create temp file for massdns stdout: %w", err)
 	}
-	defer stdoutFile.Close()
+	defer func() {
+		_ = stdoutFile.Close()
+	}()
 
 	stderrFile, err := os.CreateTemp(instance.options.TempDir, "massdns-stderr-")
 	if err != nil {
 		return "", "", 0, fmt.Errorf("could not create temp file for massdns stdout: %w", err)
 	}
-	defer stderrFile.Close()
+	defer func() {
+		_ = stderrFile.Close()
+	}()
 
 	// Run the command on a temp file and wait for the output
 	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", instance.options.InputFile, "-s", strconv.Itoa(instance.options.Threads)}
@@ -427,8 +431,8 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 
 	// Close the files and return
 	if output != nil {
-		w.Flush()
-		output.Close()
+		_ = w.Flush()
+		_ = output.Close()
 	}
 	return nil
 }

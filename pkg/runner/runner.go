@@ -52,7 +52,7 @@ func New(options *Options) (*Runner, error) {
 
 // Close releases all the resources and cleans up
 func (r *Runner) Close() {
-	os.RemoveAll(r.tempDir)
+	_ = os.RemoveAll(r.tempDir)
 }
 
 // findBinary searches for massdns binary in various pre-defined paths
@@ -114,7 +114,7 @@ func (r *Runner) processDomain() {
 	inputFile, err := os.Open(r.options.Wordlist)
 	if err != nil {
 		gologger.Error().Msgf("Could not read bruteforce wordlist (%s): %s\n", r.options.Wordlist, err)
-		file.Close()
+		_ = file.Close()
 		return
 	}
 
@@ -133,9 +133,9 @@ func (r *Runner) processDomain() {
 			_, _ = writer.WriteString(text + "." + domain + "\n")
 		}
 	}
-	writer.Flush()
-	inputFile.Close()
-	file.Close()
+	_ = writer.Flush()
+	_ = inputFile.Close()
+	_ = file.Close()
 
 	gologger.Info().Msgf("Generating permutations took %s at %s\n", time.Since(now), resolveFile)
 
@@ -155,7 +155,7 @@ func (r *Runner) processSubdomains() {
 			return
 		}
 		_, _ = io.Copy(file, os.Stdin)
-		file.Close()
+		_ = file.Close()
 		resolveFile = file.Name()
 	} else {
 		// Use the file if user has provided one
