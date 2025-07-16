@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -58,7 +57,6 @@ func (instance *Instance) RunWithContext(ctx context.Context) (stdout, stderr st
 		args = append(args, strings.Split(instance.options.MassDnsCmd, " ")...)
 	}
 
-	log.Fatalf("flag: %s %s", instance.options.MassdnsPath, strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, instance.options.MassdnsPath, args...)
 	cmd.Stdout = stdoutFile
 
@@ -274,7 +272,9 @@ func (instance *Instance) countLines(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	scanner := bufio.NewScanner(file)
 	count := 0
@@ -291,7 +291,9 @@ func (instance *Instance) createChunk(inputFile string, chunkNum, startLine int)
 	if err != nil {
 		return "", 0, fmt.Errorf("could not create chunk file: %w", err)
 	}
-	defer chunkFile.Close()
+	defer func() {
+		_ = chunkFile.Close()
+	}()
 
 	// Open input file
 	input, err := os.Open(inputFile)
@@ -299,7 +301,9 @@ func (instance *Instance) createChunk(inputFile string, chunkNum, startLine int)
 		_ = os.Remove(chunkFile.Name())
 		return "", 0, fmt.Errorf("could not open input file: %w", err)
 	}
-	defer input.Close()
+	defer func() {
+		_ = input.Close()
+	}()
 
 	scanner := bufio.NewScanner(input)
 	writer := bufio.NewWriter(chunkFile)
