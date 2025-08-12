@@ -14,7 +14,7 @@ jobs:
           go-version: 1.21
           
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8.0.0
