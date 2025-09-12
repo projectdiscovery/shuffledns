@@ -113,7 +113,7 @@ The tool also needs a list of valid resolvers. The [dnsvalidator](https://github
 
 ## Installation Instructions
 
-`shuffledns` requires `go1.21+` to install successfully. Run the following command to install the latest version: 
+`shuffledns` requires `go1.24+` to install successfully. Run the following command to install the latest version: 
 
 ```bash
 go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
