@@ -1,20 +1,14 @@
 package runner
 
 import (
-	"bufio"
 	"context"
 	"errors"
-	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/shuffledns/pkg/massdns"
 	fileutil "github.com/projectdiscovery/utils/file"
-	"github.com/rs/xid"
 )
 
 // Runner is a client for running the enumeration process.
@@ -81,9 +75,9 @@ func (r *Runner) findBinary() string {
 // RunEnumeration sets up the input layer for giving input to massdns
 // binary and runs the actual enumeration
 func (r *Runner) RunEnumeration() {
-	// Handle only wildcard filtering
+	// Handle only wildcard filtering on existing massdns output
 	if r.options.MassdnsRaw != "" {
-		r.processSubdomains()
+		r.processExistingOutput()
 		return
 	}
 
@@ -102,72 +96,19 @@ func (r *Runner) RunEnumeration() {
 
 // processDomain processes the bruteforce for a domain using a wordlist
 func (r *Runner) processDomain() {
-	resolveFile := filepath.Join(r.tempDir, xid.New().String())
-	file, err := os.Create(resolveFile)
-	if err != nil {
-		gologger.Error().Msgf("Could not create bruteforce list (%s): %s\n", r.tempDir, err)
-		return
-	}
-	writer := bufio.NewWriter(file)
-
 	// Read the input wordlist for bruteforce generation
 	inputFile, err := os.Open(r.options.Wordlist)
 	if err != nil {
 		gologger.Error().Msgf("Could not read bruteforce wordlist (%s): %s\n", r.options.Wordlist, err)
-		_ = file.Close()
 		return
 	}
+	defer func() {
+		_ = inputFile.Close()
+	}()
 
-	gologger.Info().Msgf("Started generating bruteforce permutation\n")
+	gologger.Info().Msgf("Started generating bruteforce permutation with streaming processing\n")
 
-	now := time.Now()
-	// Create permutation for domain with wordlist
-	scanner := bufio.NewScanner(inputFile)
-	for scanner.Scan() {
-		// RFC4343 - case insensitive domain
-		text := strings.ToLower(scanner.Text())
-		if text == "" {
-			continue
-		}
-		for _, domain := range r.options.Domains {
-			_, _ = writer.WriteString(text + "." + domain + "\n")
-		}
-	}
-	_ = writer.Flush()
-	_ = inputFile.Close()
-	_ = file.Close()
-
-	gologger.Info().Msgf("Generating permutations took %s at %s\n", time.Since(now), resolveFile)
-
-	// Run the actual massdns enumeration process
-	r.runMassdns(resolveFile)
-}
-
-// processSubdomain processes the resolving for a list of subdomains
-func (r *Runner) processSubdomains() {
-	var resolveFile string
-
-	// If there is stdin, write the resolution list to the file
-	if fileutil.HasStdin() && r.options.SubdomainsList == "" {
-		file, err := os.CreateTemp(r.tempDir, "massdns-stdin-")
-		if err != nil {
-			gologger.Error().Msgf("Could not create resolution list (%s): %s\n", r.tempDir, err)
-			return
-		}
-		_, _ = io.Copy(file, os.Stdin)
-		_ = file.Close()
-		resolveFile = file.Name()
-	} else {
-		// Use the file if user has provided one
-		resolveFile = r.options.SubdomainsList
-	}
-
-	// Run the actual massdns enumeration process
-	r.runMassdns(resolveFile)
-}
-
-// runMassdns runs the massdns tool on the list of inputs
-func (r *Runner) runMassdns(inputFile string) {
+	// Create massdns instance for processing chunks
 	massdns, err := massdns.New(massdns.Options{
 		Domains:                r.options.Domains,
 		AutoExtractRootDomains: r.options.AutoExtractRootDomains,
@@ -175,7 +116,6 @@ func (r *Runner) runMassdns(inputFile string) {
 		MassdnsPath:            r.options.MassdnsPath,
 		Threads:                r.options.Threads,
 		WildcardsThreads:       r.options.WildcardThreads,
-		InputFile:              inputFile,
 		ResolversFile:          r.options.ResolversFile,
 		TrustedResolvers:       r.options.TrustedResolvers,
 		TempDir:                r.tempDir,
@@ -185,6 +125,112 @@ func (r *Runner) runMassdns(inputFile string) {
 		StrictWildcard:         r.options.StrictWildcard,
 		WildcardOutputFile:     r.options.WildcardOutputFile,
 		MassDnsCmd:             r.options.MassDnsCmd,
+		KeepStderr:             r.options.KeepStderr,
+		BatchSize:              r.options.BatchSize,
+		OnResult:               r.options.OnResult,
+	})
+	if err != nil {
+		gologger.Error().Msgf("Could not create massdns client: %s\n", err)
+		return
+	}
+
+	// Use streaming processing with batcher
+	err = massdns.ProcessDomainStreaming(context.Background(), inputFile)
+	if err != nil {
+		gologger.Error().Msgf("Could not process domain with streaming: %s\n", err)
+		return
+	}
+
+	if r.options.WildcardOutputFile != "" {
+		_ = massdns.DumpWildcardsToFile(r.options.WildcardOutputFile)
+	}
+
+	gologger.Info().Msgf("Finished resolving.\n")
+}
+
+// processSubdomain processes the resolving for a list of subdomains
+func (r *Runner) processSubdomains() {
+	// Create massdns instance for processing chunks
+	massdns, err := massdns.New(massdns.Options{
+		Domains:                r.options.Domains,
+		AutoExtractRootDomains: r.options.AutoExtractRootDomains,
+		Retries:                r.options.Retries,
+		MassdnsPath:            r.options.MassdnsPath,
+		Threads:                r.options.Threads,
+		WildcardsThreads:       r.options.WildcardThreads,
+		ResolversFile:          r.options.ResolversFile,
+		TrustedResolvers:       r.options.TrustedResolvers,
+		TempDir:                r.tempDir,
+		OutputFile:             r.options.Output,
+		Json:                   r.options.Json,
+		MassdnsRaw:             r.options.MassdnsRaw,
+		StrictWildcard:         r.options.StrictWildcard,
+		WildcardOutputFile:     r.options.WildcardOutputFile,
+		MassDnsCmd:             r.options.MassDnsCmd,
+		KeepStderr:             r.options.KeepStderr,
+		BatchSize:              r.options.BatchSize,
+		OnResult:               r.options.OnResult,
+	})
+	if err != nil {
+		gologger.Error().Msgf("Could not create massdns client: %s\n", err)
+		return
+	}
+
+	// Handle stdin or file input
+	if fileutil.HasStdin() && r.options.SubdomainsList == "" {
+		// Use streaming processing for stdin
+		gologger.Info().Msgf("Processing subdomains from stdin with streaming\n")
+		err = massdns.ProcessSubdomainsStreaming(context.Background(), os.Stdin)
+		if err != nil {
+			gologger.Error().Msgf("Could not process subdomains with streaming: %s\n", err)
+			return
+		}
+	} else {
+		// Use streaming processing for file
+		subdomainFile, err := os.Open(r.options.SubdomainsList)
+		if err != nil {
+			gologger.Error().Msgf("Could not open subdomain list (%s): %s\n", r.options.SubdomainsList, err)
+			return
+		}
+		defer func() {
+			_ = subdomainFile.Close()
+		}()
+
+		gologger.Info().Msgf("Processing subdomains from file with streaming\n")
+		err = massdns.ProcessSubdomainsStreaming(context.Background(), subdomainFile)
+		if err != nil {
+			gologger.Error().Msgf("Could not process subdomains with streaming from file: %s\n", err)
+			return
+		}
+	}
+
+	if r.options.WildcardOutputFile != "" {
+		_ = massdns.DumpWildcardsToFile(r.options.WildcardOutputFile)
+	}
+
+	gologger.Info().Msgf("Finished resolving.\n")
+}
+
+// processExistingOutput processes existing massdns output for wildcard filtering
+func (r *Runner) processExistingOutput() {
+	massdns, err := massdns.New(massdns.Options{
+		Domains:                r.options.Domains,
+		AutoExtractRootDomains: r.options.AutoExtractRootDomains,
+		Retries:                r.options.Retries,
+		MassdnsPath:            r.options.MassdnsPath,
+		Threads:                r.options.Threads,
+		WildcardsThreads:       r.options.WildcardThreads,
+		ResolversFile:          r.options.ResolversFile,
+		TrustedResolvers:       r.options.TrustedResolvers,
+		TempDir:                r.tempDir,
+		OutputFile:             r.options.Output,
+		Json:                   r.options.Json,
+		MassdnsRaw:             r.options.MassdnsRaw,
+		StrictWildcard:         r.options.StrictWildcard,
+		WildcardOutputFile:     r.options.WildcardOutputFile,
+		MassDnsCmd:             r.options.MassDnsCmd,
+		KeepStderr:             r.options.KeepStderr,
+		BatchSize:              r.options.BatchSize,
 		OnResult:               r.options.OnResult,
 	})
 	if err != nil {
@@ -194,12 +240,13 @@ func (r *Runner) runMassdns(inputFile string) {
 
 	err = massdns.Run(context.Background())
 	if err != nil {
-		gologger.Error().Msgf("Could not run massdns: %s\n", err)
+		gologger.Error().Msgf("Could not process existing massdns output: %s\n", err)
+		return
 	}
 
 	if r.options.WildcardOutputFile != "" {
 		_ = massdns.DumpWildcardsToFile(r.options.WildcardOutputFile)
 	}
 
-	gologger.Info().Msgf("Finished resolving.\n")
+	gologger.Info().Msgf("Finished processing existing output.\n")
 }

@@ -9,6 +9,11 @@ import (
 	updateutils "github.com/projectdiscovery/utils/update"
 )
 
+const (
+	// DefaultBatchSize is the default number of lines per chunk for incremental processing
+	DefaultBatchSize = 500000
+)
+
 // Options contains the configuration options for tuning
 // the active dns resolving process.
 type Options struct {
@@ -35,6 +40,8 @@ type Options struct {
 	MassDnsCmd             string              // Supports massdns flags(example -i)
 	DisableUpdateCheck     bool                // DisableUpdateCheck disable automatic update check
 	Mode                   string
+	KeepStderr             bool // KeepStderr controls whether to capture and store massdns stderr output
+	BatchSize              int  // BatchSize controls the number of lines per chunk for incremental processing
 
 	OnResult func(*retryabledns.DNSData)
 }
@@ -43,6 +50,7 @@ var DefaultOptions = Options{
 	Threads:         10000,
 	Retries:         5,
 	WildcardThreads: 250,
+	BatchSize:       DefaultBatchSize, // Default batch size for incremental processing
 }
 
 // ParseOptions parses the command line flags provided by a user
@@ -88,6 +96,8 @@ func ParseOptions() *Options {
 		flagSet.IntVar(&options.Retries, "retries", 5, "Number of retries for dns enumeration"),
 		flagSet.BoolVarP(&options.StrictWildcard, "strict-wildcard", "sw", false, "Perform wildcard check on all found subdomains"),
 		flagSet.IntVar(&options.WildcardThreads, "wt", 250, "Number of concurrent wildcard checks"),
+		flagSet.BoolVar(&options.KeepStderr, "retain-stderr", false, "Capture and store massdns stderr output (default: discard)"),
+		flagSet.IntVar(&options.BatchSize, "batch-size", DefaultBatchSize, "Number of lines per chunk for incremental processing"),
 	)
 
 	flagSet.CreateGroup("debug", "Debug",
