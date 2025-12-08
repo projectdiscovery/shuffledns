@@ -219,8 +219,8 @@ github.com/projectdiscovery/gologger v1.1.63 h1:oboXTekGtbmo9bPAAzkeCeo4EPHAwAdH
 github.com/projectdiscovery/gologger v1.1.63/go.mod h1:daez34xaA7LTazBb4t+Ccm9/9Kjvlsu4EY033lQdATA=
 github.com/projectdiscovery/machineid v0.0.0-20240226150047-2e2c51e35983 h1:ZScLodGSezQVwsQDtBSMFp72WDq0nNN+KE/5DHKY5QE=
 github.com/projectdiscovery/machineid v0.0.0-20240226150047-2e2c51e35983/go.mod h1:3G3BRKui7nMuDFAZKR/M2hiOLtaOmyukT20g88qRQjI=
-github.com/projectdiscovery/retryabledns v1.0.110 h1:24p1PzWBdfsRnGsBf6ZxXPzvK0sYaL4q/ju4+2OhJzU=
-github.com/projectdiscovery/retryabledns v1.0.110/go.mod h1:GFj5HjxfaGrZeoYf79zI/R99XljBNjmOqNvwOqPepRU=
+github.com/projectdiscovery/retryabledns v1.0.111 h1:iyMdCDgNmaSRJYcGqB+SLlvlw9WijlbJ6Q9OEpRAWsQ=
+github.com/projectdiscovery/retryabledns v1.0.111/go.mod h1:6TOPJ3QAE4reBu6bvsGsTcyEb+OypcKYFQH7yVsjyIM=
 github.com/projectdiscovery/utils v0.7.3 h1:kX+77AA58yK6EZgkTRJEnK9V/7AZYzlXdcu/o/kJhFs=
 github.com/projectdiscovery/utils v0.7.3/go.mod h1:uDdQ3/VWomai98l+a3Ye/srDXdJ4xUIar/mSXlQ9gBM=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
