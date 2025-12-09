@@ -9,31 +9,39 @@ import (
 	updateutils "github.com/projectdiscovery/utils/update"
 )
 
+const (
+	// DefaultBatchSize is the default number of lines per chunk for incremental processing
+	DefaultBatchSize = 500000
+)
+
 // Options contains the configuration options for tuning
 // the active dns resolving process.
 type Options struct {
-	Directory          string              // Directory is a directory for temporary data
-	Domains            goflags.StringSlice // Domains is the list of domains to find subdomains
-	SubdomainsList     string              // SubdomainsList is the file containing list of hosts to resolve
-	ResolversFile      string              // ResolversFile is the file containing resolvers to use for enumeration
-	TrustedResolvers   string              // TrustedResolvers is the file containing trusted resolvers
-	Wordlist           string              // Wordlist is a wordlist to use for enumeration
-	MassdnsPath        string              // MassdnsPath contains the path to massdns binary
-	Output             string              // Output is the file to write found subdomains to.
-	Json               bool                // Json is the format for making output as ndjson
-	Silent             bool                // Silent suppresses any extra text and only writes found host:port to screen
-	Version            bool                // Version specifies if we should just show version and exit
-	Retries            int                 // Retries is the number of retries for dns enumeration
-	Verbose            bool                // Verbose flag indicates whether to show verbose output or not
-	NoColor            bool                // No-Color disables the colored output
-	Threads            int                 // Thread controls the number of parallel host to enumerate
-	MassdnsRaw         string              // MassdnsRaw perform wildcards filtering from an existing massdns output file
-	WildcardThreads    int                 // WildcardsThreads controls the number of parallel host to check for wildcard
-	StrictWildcard     bool                // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
-	WildcardOutputFile string              // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
-	MassDnsCmd         string              // Supports massdns flags(example -i)
-	DisableUpdateCheck bool                // DisableUpdateCheck disable automatic update check
-	Mode               string
+	AutoExtractRootDomains bool                // Automatically extract root domains
+	Directory              string              // Directory is a directory for temporary data
+	Domains                goflags.StringSlice // Domains is the list of domains to find subdomains
+	SubdomainsList         string              // SubdomainsList is the file containing list of hosts to resolve
+	ResolversFile          string              // ResolversFile is the file containing resolvers to use for enumeration
+	TrustedResolvers       string              // TrustedResolvers is the file containing trusted resolvers
+	Wordlist               string              // Wordlist is a wordlist to use for enumeration
+	MassdnsPath            string              // MassdnsPath contains the path to massdns binary
+	Output                 string              // Output is the file to write found subdomains to.
+	Json                   bool                // Json is the format for making output as ndjson
+	Silent                 bool                // Silent suppresses any extra text and only writes found host:port to screen
+	Version                bool                // Version specifies if we should just show version and exit
+	Retries                int                 // Retries is the number of retries for dns enumeration
+	Verbose                bool                // Verbose flag indicates whether to show verbose output or not
+	NoColor                bool                // No-Color disables the colored output
+	Threads                int                 // Thread controls the number of parallel host to enumerate
+	MassdnsRaw             string              // MassdnsRaw perform wildcards filtering from an existing massdns output file
+	WildcardThreads        int                 // WildcardsThreads controls the number of parallel host to check for wildcard
+	StrictWildcard         bool                // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
+	WildcardOutputFile     string              // StrictWildcard flag indicates whether wildcard check has to be performed on each found subdomains
+	MassDnsCmd             string              // Supports massdns flags(example -i)
+	DisableUpdateCheck     bool                // DisableUpdateCheck disable automatic update check
+	Mode                   string
+	KeepStderr             bool // KeepStderr controls whether to capture and store massdns stderr output
+	BatchSize              int  // BatchSize controls the number of lines per chunk for incremental processing
 
 	OnResult func(*retryabledns.DNSData)
 }
@@ -42,6 +50,7 @@ var DefaultOptions = Options{
 	Threads:         10000,
 	Retries:         5,
 	WildcardThreads: 250,
+	BatchSize:       DefaultBatchSize, // Default batch size for incremental processing
 }
 
 // ParseOptions parses the command line flags provided by a user
@@ -53,6 +62,7 @@ func ParseOptions() *Options {
 
 	flagSet.CreateGroup("input", "Input",
 		flagSet.StringSliceVarP(&options.Domains, "domain", "d", nil, "Domain to find or resolve subdomains for", goflags.FileCommaSeparatedStringSliceOptions),
+		flagSet.BoolVarP(&options.AutoExtractRootDomains, "auto-domain", "ad", false, "Automatically extract root domains"),
 		flagSet.StringVarP(&options.SubdomainsList, "list", "l", "", "File containing list of subdomains to resolve"),
 		flagSet.StringVarP(&options.Wordlist, "wordlist", "w", "", "File containing words to bruteforce for domain"),
 		flagSet.StringVarP(&options.ResolversFile, "resolver", "r", "", "File containing list of resolvers for enumeration"),
@@ -86,6 +96,8 @@ func ParseOptions() *Options {
 		flagSet.IntVar(&options.Retries, "retries", 5, "Number of retries for dns enumeration"),
 		flagSet.BoolVarP(&options.StrictWildcard, "strict-wildcard", "sw", false, "Perform wildcard check on all found subdomains"),
 		flagSet.IntVar(&options.WildcardThreads, "wt", 250, "Number of concurrent wildcard checks"),
+		flagSet.BoolVar(&options.KeepStderr, "retain-stderr", false, "Capture and store massdns stderr output (default: discard)"),
+		flagSet.IntVar(&options.BatchSize, "batch-size", DefaultBatchSize, "Number of lines per chunk for incremental processing"),
 	)
 
 	flagSet.CreateGroup("debug", "Debug",
@@ -95,7 +107,9 @@ func ParseOptions() *Options {
 		flagSet.BoolVarP(&options.NoColor, "no-color", "nc", false, "Don't Use colors in output"),
 	)
 
-	_ = flagSet.Parse()
+	if err := flagSet.Parse(); err != nil {
+		gologger.Fatal().Msgf("Program exiting: %s\n", err)
+	}
 
 	// Read the inputs and configure the logging
 	options.configureOutput()

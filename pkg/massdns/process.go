@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -17,37 +18,64 @@ import (
 	"github.com/projectdiscovery/shuffledns/pkg/parser"
 	"github.com/projectdiscovery/shuffledns/pkg/store"
 	"github.com/projectdiscovery/shuffledns/pkg/wildcards"
-	folderutil "github.com/projectdiscovery/utils/folder"
-	stringsutil "github.com/projectdiscovery/utils/strings"
+	"github.com/projectdiscovery/utils/batcher"
+	fileutil "github.com/projectdiscovery/utils/file"
+	ioutil "github.com/projectdiscovery/utils/io"
 	"github.com/remeh/sizedwaitgroup"
+	"github.com/weppos/publicsuffix-go/publicsuffix"
 )
 
 // runs massdns binary with the specified options
 func (instance *Instance) RunWithContext(ctx context.Context) (stdout, stderr string, took time.Duration, err error) {
 	start := time.Now()
 
+	// Create temporary file for massdns output
 	stdoutFile, err := os.CreateTemp(instance.options.TempDir, "massdns-stdout-")
 	if err != nil {
-		return "", "", 0, fmt.Errorf("could not create temp file for massdns stdout: %w", err)
+		return "", "", 0, fmt.Errorf("could not create temp file for massdns output: %w", err)
 	}
-	defer stdoutFile.Close()
+	defer func() {
+		_ = stdoutFile.Close()
+	}()
 
-	stderrFile, err := os.CreateTemp(instance.options.TempDir, "massdns-stderr-")
-	if err != nil {
-		return "", "", 0, fmt.Errorf("could not create temp file for massdns stdout: %w", err)
+	// Handle stderr based on KeepStderr option
+	var stderrFile *os.File
+	if instance.options.KeepStderr {
+		stderrFile, err = os.CreateTemp(instance.options.TempDir, "massdns-stderr-")
+		if err != nil {
+			return "", "", 0, fmt.Errorf("could not create temp file for massdns stderr: %w", err)
+		}
+		defer func() {
+			_ = stderrFile.Close()
+		}()
 	}
-	defer stderrFile.Close()
 
 	// Run the command on a temp file and wait for the output
 	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", instance.options.InputFile, "-s", strconv.Itoa(instance.options.Threads)}
 	if instance.options.MassDnsCmd != "" {
 		args = append(args, strings.Split(instance.options.MassDnsCmd, " ")...)
 	}
+
 	cmd := exec.CommandContext(ctx, instance.options.MassdnsPath, args...)
 	cmd.Stdout = stdoutFile
-	cmd.Stderr = stderrFile
+
+	// Set stderr based on KeepStderr option
+	if instance.options.KeepStderr {
+		cmd.Stderr = stderrFile
+	} else {
+		// Discard stderr by sending it to /dev/null
+		cmd.Stderr = nil
+	}
+
 	err = cmd.Run()
-	return stdoutFile.Name(), stderrFile.Name(), time.Since(start), err
+
+	// Return stderr filename only if it was captured
+	stderrFilename := ""
+	if instance.options.KeepStderr {
+		stderrFilename = stderrFile.Name()
+	}
+
+	return stdoutFile.Name(), stderrFilename, time.Since(start), err
 }
 
 func (instance *Instance) Run(ctx context.Context) error {
@@ -58,7 +86,7 @@ func (instance *Instance) Run(ctx context.Context) error {
 	}
 
 	// Check for blank input file or non-existent input file
-	blank, err := IsEmptyFile(inputFile)
+	blank, err := fileutil.IsEmpty(inputFile)
 	if err != nil {
 		return err
 	}
@@ -73,38 +101,11 @@ func (instance *Instance) Run(ctx context.Context) error {
 	}
 	defer shstore.Close()
 
-	// Set the correct target file
-	tmpDir := instance.options.TempDir
-
 	// Check if we need to run massdns
 	if instance.options.MassdnsRaw == "" {
-		if len(instance.options.Domains) > 0 {
-			gologger.Info().Msgf("Executing massdns on %s\n", strings.Join(instance.options.Domains, ", "))
-		} else {
-			gologger.Info().Msgf("Executing massdns\n")
-		}
-
-		// Create a temporary file for the massdns output
-		gologger.Info().Msgf("using massdns output directory: %s\n", tmpDir)
-		stdoutFile, stderrFile, took, err := instance.RunWithContext(ctx)
-		gologger.Info().Msgf("massdns output file: %s\n", stdoutFile)
-		gologger.Info().Msgf("massdns error file: %s\n", stderrFile)
-		if err != nil {
-			return fmt.Errorf("could not execute massdns: %s", err)
-		}
-
-		gologger.Info().Msgf("Massdns execution took %s\n", took)
-
-		gologger.Info().Msgf("Started parsing massdns output\n")
-
-		now := time.Now()
-
-		err = instance.parseMassDNSOutputDir(tmpDir, shstore)
-		if err != nil {
-			return fmt.Errorf("could not parse massdns output: %w", err)
-		}
-
-		gologger.Info().Msgf("Massdns output parsing completed in %s\n", time.Since(now))
+		// This case is now handled by the streaming methods in the runner
+		// The Run method is only called for raw massdns output processing
+		return errors.New("streaming processing should be used for new massdns runs")
 	} else { // parse the input file
 		gologger.Info().Msgf("Started parsing massdns input\n")
 		now := time.Now()
@@ -113,6 +114,16 @@ func (instance *Instance) Run(ctx context.Context) error {
 			return fmt.Errorf("could not parse massdns input: %w", err)
 		}
 		gologger.Info().Msgf("Massdns input parsing completed in %s\n", time.Since(now))
+	}
+
+	if instance.options.AutoExtractRootDomains {
+		gologger.Info().Msgf("Started extracting root domains\n")
+		now := time.Now()
+		err = instance.autoExtractRootDomains(shstore)
+		if err != nil {
+			return fmt.Errorf("could not extract root domains: %w", err)
+		}
+		gologger.Info().Msgf("Root domain extraction completed in %s\n", time.Since(now))
 	}
 
 	// Perform wildcard filtering only if domain name has been specified
@@ -138,25 +149,100 @@ func (instance *Instance) Run(ctx context.Context) error {
 	return nil
 }
 
-func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
-	// at first we need the full structure in memory to elaborate it in parallell
-	err := parser.ParseFile(tmpFile, func(domain string, ip []string) error {
-		for _, ip := range ip {
-			// Check if ip exists in the store. If not,
-			// add the ip to the map and continue with the next ip.
-			if !store.Exists(ip) {
-				if err := store.New(ip, domain); err != nil {
-					return fmt.Errorf("could not create new record: %w", err)
-				}
-				continue
-			}
+// runChunk runs massdns on a specific chunk file
+func (instance *Instance) runChunk(ctx context.Context, chunkFile string) (stdout, stderr string, took time.Duration, err error) {
+	start := time.Now()
 
-			if err := store.Update(ip, domain); err != nil {
-				return fmt.Errorf("could not update record: %w", err)
+	// Create temporary file for massdns output
+	stdoutFile, err := os.CreateTemp(instance.options.TempDir, "massdns-chunk-stdout-")
+	if err != nil {
+		return "", "", 0, fmt.Errorf("could not create temp file for massdns output: %w", err)
+	}
+	defer func() {
+		_ = stdoutFile.Close()
+	}()
+
+	// Handle stderr based on KeepStderr option
+	var stderrFile *os.File
+	if instance.options.KeepStderr {
+		stderrFile, err = os.CreateTemp(instance.options.TempDir, "massdns-chunk-stderr-")
+		if err != nil {
+			return "", "", 0, fmt.Errorf("could not create temp file for massdns stderr: %w", err)
+		}
+		defer func() {
+			_ = stderrFile.Close()
+		}()
+	}
+
+	// Run the command on the chunk file
+	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", chunkFile, "-s", strconv.Itoa(instance.options.Threads)}
+	if instance.options.MassDnsCmd != "" {
+		args = append(args, strings.Split(instance.options.MassDnsCmd, " ")...)
+	}
+
+	cmd := exec.CommandContext(ctx, instance.options.MassdnsPath, args...)
+	cmd.Stdout = stdoutFile
+
+	// Set stderr based on KeepStderr option
+	if instance.options.KeepStderr {
+		cmd.Stderr = stderrFile
+	} else {
+		// Discard stderr by sending it to /dev/null
+		cmd.Stderr = nil
+	}
+
+	err = cmd.Run()
+
+	// Return stderr filename only if it was captured
+	stderrFilename := ""
+	if instance.options.KeepStderr {
+		stderrFilename = stderrFile.Name()
+	}
+
+	return stdoutFile.Name(), stderrFilename, time.Since(start), err
+}
+
+type item struct {
+	ip     string
+	domain string
+}
+
+func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
+	flushToDisk := func(ip string, domains []string) error {
+		if err := store.Append(ip, domains...); err != nil {
+			return fmt.Errorf("could not update record: %w", err)
+		}
+		return nil
+	}
+
+	bulkWriter := batcher.New[item](
+		batcher.WithMaxCapacity[item](10000),
+		batcher.WithFlushInterval[item](10*time.Second),
+		batcher.WithFlushCallback[item](func(items []item) {
+			ipMap := make(map[string][]string)
+			for _, item := range items {
+				ipMap[item.ip] = append(ipMap[item.ip], item.domain)
 			}
+			for ip, domains := range ipMap {
+				if err := flushToDisk(ip, domains); err != nil {
+					gologger.Fatal().Msgf("could not update record: %s", err)
+				}
+			}
+		}),
+	)
+
+	bulkWriter.Run()
+
+	err := parser.ParseFile(tmpFile, func(domain string, ips []string) error {
+		for _, ip := range ips {
+			bulkWriter.Append(item{ip: ip, domain: domain})
 		}
 		return nil
 	})
+
+	bulkWriter.Stop()
+
+	bulkWriter.WaitDone()
 
 	if err != nil {
 		return fmt.Errorf("could not parse massdns output: %w", err)
@@ -165,21 +251,26 @@ func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.St
 	return nil
 }
 
-func (instance *Instance) parseMassDNSOutputDir(tmpDir string, store *store.Store) error {
-	tmpFiles, err := folderutil.GetFiles(tmpDir)
-	if err != nil {
-		return fmt.Errorf("could not open massdns output directory: %w", err)
+func (instance *Instance) autoExtractRootDomains(store *store.Store) error {
+	candidateRootDomains := make(map[string]struct{})
+	store.Iterate(func(ip string, hostnames []string, counter int) {
+		for _, hostname := range hostnames {
+			rootDomain, err := publicsuffix.Domain(hostname)
+			if err != nil {
+				continue
+			}
+			candidateRootDomains[rootDomain] = struct{}{}
+		}
+	})
+
+	// add the existing ones
+	for _, domain := range instance.options.Domains {
+		candidateRootDomains[domain] = struct{}{}
 	}
 
-	for _, tmpFile := range tmpFiles {
-		// just process stdout files
-		if !stringsutil.ContainsAnyI(tmpFile, "stdout") {
-			continue
-		}
-		err = instance.parseMassDNSOutputFile(tmpFile, store)
-		if err != nil {
-			return fmt.Errorf("could not parse massdns output: %w", err)
-		}
+	instance.options.Domains = make([]string, 0)
+	for item := range candidateRootDomains {
+		instance.options.Domains = append(instance.options.Domains, item)
 	}
 
 	return nil
@@ -215,15 +306,14 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 					default:
 					}
 
-					isWildcard, ips := instance.wildcardResolver.LookupHost(hostname)
-					gologger.Debug().Msgf("isWildcard: %v, ips: %v, hostname: %s\n", isWildcard, ips, hostname)
+					isWildcard, ips := instance.wildcardResolver.LookupHost(hostname, IP)
 					if len(ips) > 0 {
 						for ip := range ips {
 							// we add the single ip to the wildcard list
 							if err := instance.wildcardStore.Set(ip); err != nil {
 								gologger.Error().Msgf("could not set wildcard ip: %s", err)
 							}
-							gologger.Debug().Msgf("Removing wildcard %s\n", ip)
+							gologger.Info().Msgf("Removing wildcard %s\n", ip)
 						}
 					}
 
@@ -233,7 +323,7 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 							gologger.Error().Msgf("could not set wildcard ip: %s", err)
 						}
 						ipCancelFunc()
-						gologger.Debug().Msgf("Removed wildcard %s\n", IP)
+						gologger.Info().Msgf("Removed wildcard %s\n", IP)
 					}
 
 				}(ipCtx, ipCancelFunc, ip, hostname)
@@ -247,6 +337,12 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 		cancelFunc()
 	}
 
+	// Do a second pass as well and remove all the wildcards
+	// from the store that we have found so that everything is covered
+	allWildcardIPs := instance.wildcardResolver.GetAllWildcardIPs()
+	for ip := range allWildcardIPs {
+		_ = st.Delete(ip)
+	}
 	// drop all wildcard from the store
 	return instance.wildcardStore.Iterate(func(k string) error {
 		return st.Delete(k)
@@ -256,9 +352,10 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 func (instance *Instance) writeOutput(store *store.Store) error {
 	// Write the unique deduplicated output to the file or stdout
 	// depending on what the user has asked.
-	var output *os.File
-	var w *bufio.Writer
 	var err error
+	var output *os.File
+	var safeWriter *ioutil.SafeWriter
+	var w *bufio.Writer
 
 	if instance.options.OutputFile != "" {
 		output, err = os.Create(instance.options.OutputFile)
@@ -266,6 +363,10 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 			return fmt.Errorf("could not create massdns output file: %v", err)
 		}
 		w = bufio.NewWriter(output)
+		safeWriter, err = ioutil.NewSafeWriter(w)
+		if err != nil {
+			return fmt.Errorf("could not create safe writer: %v", err)
+		}
 	}
 
 	uniqueMap := make(map[string]struct{})
@@ -308,6 +409,14 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 						gologger.Info().Msgf("not resolved with trusted resolver - skipping: %s", hostname)
 						return
 					} else {
+						// perform a last check on wildcards ip in case some hosts sneaked due to bad resolvers
+						for _, ip := range resp.A {
+							if instance.wildcardStore.Has(ip) {
+								gologger.Info().Msgf("resolved with trusted resolver but is a wildcard - skipping: %s", hostname)
+								return
+							}
+						}
+
 						gologger.Info().Msgf("resolved with trusted resolver: %s", hostname)
 
 						if instance.options.OnResult != nil {
@@ -334,7 +443,7 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 				data := buffer.String()
 
 				if output != nil {
-					_, _ = w.WriteString(data)
+					_, _ = safeWriter.Write([]byte(data))
 				}
 				gologger.Silent().Msgf("%s", data)
 				resolvedCount++
@@ -348,8 +457,298 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 
 	// Close the files and return
 	if output != nil {
-		w.Flush()
-		output.Close()
+		_ = w.Flush()
+		_ = output.Close()
 	}
+	return nil
+}
+
+// ProcessDomainStreaming processes domain bruteforce using streaming with batcher
+func (instance *Instance) ProcessDomainStreaming(ctx context.Context, wordlistFile *os.File) error {
+	// Create a store for storing ip metadata
+	shstore, err := store.New(instance.options.TempDir)
+	if err != nil {
+		return fmt.Errorf("could not create store: %w", err)
+	}
+	defer shstore.Close()
+
+	// Create batcher for streaming permutations
+	chunkNum := 0
+	permutationCount := 0
+
+	bulkWriter := batcher.New[string](
+		batcher.WithMaxCapacity[string](instance.options.BatchSize),
+		batcher.WithFlushInterval[string](10*time.Second),
+		batcher.WithFlushCallback[string](func(permutations []string) {
+			chunkNum++
+			if len(permutations) == 0 {
+				return
+			}
+
+			gologger.Info().Msgf("Processing chunk %d (%d permutations, total: %d)\n",
+				chunkNum, len(permutations), permutationCount)
+
+			// Create temporary chunk file
+			chunkFile, err := os.CreateTemp(instance.options.TempDir, fmt.Sprintf("chunk-%d-", chunkNum))
+			if err != nil {
+				gologger.Error().Msgf("Could not create chunk file: %s\n", err)
+				return
+			}
+
+			// Write permutations to chunk file
+			writer := bufio.NewWriter(chunkFile)
+			for _, permutation := range permutations {
+				_, err := writer.WriteString(permutation + "\n")
+				if err != nil {
+					gologger.Error().Msgf("Could not write to chunk file: %s\n", err)
+					_ = chunkFile.Close()
+					_ = os.Remove(chunkFile.Name())
+					return
+				}
+			}
+			_ = writer.Flush()
+			_ = chunkFile.Close()
+
+			// Run massdns on this chunk
+			chunkStart := time.Now()
+			stdoutFile, stderrFile, took, err := instance.runChunk(ctx, chunkFile.Name())
+			if err != nil {
+				gologger.Error().Msgf("Could not execute massdns on chunk %d: %s\n", chunkNum, err)
+				_ = os.Remove(chunkFile.Name())
+				return
+			}
+
+			gologger.Info().Msgf("Chunk %d massdns execution took %s\n", chunkNum, took)
+
+			// Parse the chunk output immediately
+			parseStart := time.Now()
+			err = instance.parseMassDNSOutputFile(stdoutFile, shstore)
+			if err != nil {
+				gologger.Error().Msgf("Could not parse massdns output for chunk %d: %s\n", chunkNum, err)
+				_ = os.Remove(chunkFile.Name())
+				_ = os.Remove(stdoutFile)
+				if stderrFile != "" {
+					_ = os.Remove(stderrFile)
+				}
+				return
+			}
+
+			gologger.Info().Msgf("Chunk %d parsing completed in %s\n", chunkNum, time.Since(parseStart))
+
+			// Clean up chunk files immediately
+			_ = os.Remove(chunkFile.Name())
+			_ = os.Remove(stdoutFile)
+			if stderrFile != "" {
+				_ = os.Remove(stderrFile)
+			}
+
+			gologger.Info().Msgf("Chunk %d completed in %s\n", chunkNum, time.Since(chunkStart))
+		}),
+	)
+
+	bulkWriter.Run()
+
+	// Read wordlist and generate permutations on-the-fly
+	scanner := bufio.NewScanner(wordlistFile)
+	for scanner.Scan() {
+		// RFC4343 - case insensitive domain
+		text := strings.ToLower(scanner.Text())
+		if text == "" {
+			continue
+		}
+
+		// Generate permutations for each domain
+		for _, domain := range instance.options.Domains {
+			permutation := text + "." + domain
+			bulkWriter.Append(permutation)
+			permutationCount++
+		}
+	}
+
+	// Stop the batcher and wait for completion
+	bulkWriter.Stop()
+	bulkWriter.WaitDone()
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading wordlist: %w", err)
+	}
+
+	gologger.Info().Msgf("Total permutations generated: %d\n", permutationCount)
+
+	// Perform post-processing steps
+	if instance.options.AutoExtractRootDomains {
+		gologger.Info().Msgf("Started extracting root domains\n")
+		now := time.Now()
+		err = instance.autoExtractRootDomains(shstore)
+		if err != nil {
+			return fmt.Errorf("could not extract root domains: %w", err)
+		}
+		gologger.Info().Msgf("Root domain extraction completed in %s\n", time.Since(now))
+	}
+
+	// Perform wildcard filtering only if domain name has been specified
+	if len(instance.options.Domains) > 0 {
+		gologger.Info().Msgf("Started removing wildcards records\n")
+		now := time.Now()
+		err = instance.filterWildcards(shstore)
+		if err != nil {
+			return fmt.Errorf("could not filter wildcards: %w", err)
+		}
+		gologger.Info().Msgf("Wildcard removal completed in %s\n", time.Since(now))
+	}
+
+	gologger.Info().Msgf("Finished enumeration, started writing output\n")
+
+	// Write the final elaborated list out
+	now := time.Now()
+	err = instance.writeOutput(shstore)
+	if err != nil {
+		return fmt.Errorf("could not write output: %w", err)
+	}
+	gologger.Info().Msgf("Output written in %s\n", time.Since(now))
+
+	return nil
+}
+
+// ProcessSubdomainsStreaming processes subdomain list using streaming with batcher
+func (instance *Instance) ProcessSubdomainsStreaming(ctx context.Context, subdomainReader io.Reader) error {
+	// Create a store for storing ip metadata
+	shstore, err := store.New(instance.options.TempDir)
+	if err != nil {
+		return fmt.Errorf("could not create store: %w", err)
+	}
+	defer shstore.Close()
+
+	// Create batcher for streaming subdomains
+	chunkNum := 0
+	subdomainCount := 0
+
+	bulkWriter := batcher.New[string](
+		batcher.WithMaxCapacity[string](instance.options.BatchSize),
+		batcher.WithFlushInterval[string](10*time.Second),
+		batcher.WithFlushCallback[string](func(subdomains []string) {
+			chunkNum++
+			if len(subdomains) == 0 {
+				return
+			}
+
+			gologger.Info().Msgf("Processing chunk %d (%d subdomains, total: %d)\n",
+				chunkNum, len(subdomains), subdomainCount)
+
+			// Create temporary chunk file
+			chunkFile, err := os.CreateTemp(instance.options.TempDir, fmt.Sprintf("chunk-%d-", chunkNum))
+			if err != nil {
+				gologger.Error().Msgf("Could not create chunk file: %s\n", err)
+				return
+			}
+
+			// Write subdomains to chunk file
+			writer := bufio.NewWriter(chunkFile)
+			for _, subdomain := range subdomains {
+				_, err := writer.WriteString(subdomain + "\n")
+				if err != nil {
+					gologger.Error().Msgf("Could not write to chunk file: %s\n", err)
+					_ = chunkFile.Close()
+					_ = os.Remove(chunkFile.Name())
+					return
+				}
+			}
+			_ = writer.Flush()
+			_ = chunkFile.Close()
+
+			// Run massdns on this chunk
+			chunkStart := time.Now()
+			stdoutFile, stderrFile, took, err := instance.runChunk(ctx, chunkFile.Name())
+			if err != nil {
+				gologger.Error().Msgf("Could not execute massdns on chunk %d: %s\n", chunkNum, err)
+				_ = os.Remove(chunkFile.Name())
+				return
+			}
+
+			gologger.Info().Msgf("Chunk %d massdns execution took %s\n", chunkNum, took)
+
+			// Parse the chunk output immediately
+			parseStart := time.Now()
+			err = instance.parseMassDNSOutputFile(stdoutFile, shstore)
+			if err != nil {
+				gologger.Error().Msgf("Could not parse massdns output for chunk %d: %s\n", chunkNum, err)
+				_ = os.Remove(chunkFile.Name())
+				_ = os.Remove(stdoutFile)
+				if stderrFile != "" {
+					_ = os.Remove(stderrFile)
+				}
+				return
+			}
+
+			gologger.Info().Msgf("Chunk %d parsing completed in %s\n", chunkNum, time.Since(parseStart))
+
+			// Clean up chunk files immediately
+			_ = os.Remove(chunkFile.Name())
+			_ = os.Remove(stdoutFile)
+			if stderrFile != "" {
+				_ = os.Remove(stderrFile)
+			}
+
+			gologger.Info().Msgf("Chunk %d completed in %s\n", chunkNum, time.Since(chunkStart))
+		}),
+	)
+
+	bulkWriter.Run()
+
+	// Read subdomains and stream them to batcher
+	scanner := bufio.NewScanner(subdomainReader)
+	for scanner.Scan() {
+		// RFC4343 - case insensitive domain
+		subdomain := strings.ToLower(strings.TrimSpace(scanner.Text()))
+		if subdomain == "" {
+			continue
+		}
+
+		bulkWriter.Append(subdomain)
+		subdomainCount++
+	}
+
+	// Stop the batcher and wait for completion
+	bulkWriter.Stop()
+	bulkWriter.WaitDone()
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading subdomains: %w", err)
+	}
+
+	gologger.Info().Msgf("Total subdomains processed: %d\n", subdomainCount)
+
+	// Perform post-processing steps
+	if instance.options.AutoExtractRootDomains {
+		gologger.Info().Msgf("Started extracting root domains\n")
+		now := time.Now()
+		err = instance.autoExtractRootDomains(shstore)
+		if err != nil {
+			return fmt.Errorf("could not extract root domains: %w", err)
+		}
+		gologger.Info().Msgf("Root domain extraction completed in %s\n", time.Since(now))
+	}
+
+	// Perform wildcard filtering only if domain name has been specified
+	if len(instance.options.Domains) > 0 {
+		gologger.Info().Msgf("Started removing wildcards records\n")
+		now := time.Now()
+		err = instance.filterWildcards(shstore)
+		if err != nil {
+			return fmt.Errorf("could not filter wildcards: %w", err)
+		}
+		gologger.Info().Msgf("Wildcard removal completed in %s\n", time.Since(now))
+	}
+
+	gologger.Info().Msgf("Finished enumeration, started writing output\n")
+
+	// Write the final elaborated list out
+	now := time.Now()
+	err = instance.writeOutput(shstore)
+	if err != nil {
+		return fmt.Errorf("could not write output: %w", err)
+	}
+	gologger.Info().Msgf("Output written in %s\n", time.Since(now))
+
 	return nil
 }

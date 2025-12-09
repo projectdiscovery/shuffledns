@@ -10,11 +10,11 @@ jobs:
     name: Test Builds
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: 1.21
+          go-version: 1.24.x
 
       - name: Test
         run: go test ./...
@@ -24,7 +24,7 @@ jobs:
         working-directory: cmd/shuffledns/
 
       # Installing massdns
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: blechschmidt/massdns
           path: ./massdns
@@ -36,6 +36,10 @@ jobs:
           sudo make install
         
       # Tests
-      - name: Basic Usage
+      - name: Bruteforce Mode Test
         run: go run . -v -d scanme.sh -r ../../tests/resolvers.txt -w ../../tests/wordlist.txt -mode bruteforce
+        working-directory: cmd/shuffledns/
+
+      - name: Resolve Mode Test
+        run: go run . -l ../../tests/subdomains.txt -v -d wrongdomain.sh -r ../../tests/resolvers.txt -mode resolve -auto-domain
         working-directory: cmd/shuffledns/

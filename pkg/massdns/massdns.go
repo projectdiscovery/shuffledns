@@ -14,6 +14,8 @@ type Instance struct {
 }
 
 type Options struct {
+	// AutoExtractRootDomains is used to extract root domains from the input list of subdomains
+	AutoExtractRootDomains bool
 	// Domain is the domain specified for enumeration
 	Domains []string
 	// Retries is the number of retries for dns
@@ -44,6 +46,10 @@ type Options struct {
 	WildcardOutputFile string
 	// MassDnsCmd supports massdns flags
 	MassDnsCmd string
+	// KeepStderr controls whether to capture and store massdns stderr output
+	KeepStderr bool
+	// BatchSize controls the number of lines per chunk for incremental processing
+	BatchSize int
 
 	OnResult func(*retryabledns.DNSData)
 }

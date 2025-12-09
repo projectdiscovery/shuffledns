@@ -52,7 +52,9 @@ func (s *Store) SaveToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	bw := bufio.NewWriter(f)
 	err = s.Iterate(func(k string) error {
@@ -71,7 +73,9 @@ func (s *Store) LoadFromFile(file string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {

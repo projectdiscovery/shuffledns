@@ -7,7 +7,6 @@ import (
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/gologger/formatter"
 	"github.com/projectdiscovery/gologger/levels"
-	"github.com/projectdiscovery/shuffledns/pkg/massdns"
 	fileutil "github.com/projectdiscovery/utils/file"
 )
 
@@ -24,7 +23,7 @@ func (options *Options) validateOptions() error {
 	}
 
 	// Check if resolvers are blank
-	if blank, err := massdns.IsEmptyFile(options.ResolversFile); err == nil {
+	if blank, err := fileutil.IsEmpty(options.ResolversFile); err == nil {
 		if blank {
 			return errors.New("empty resolver list specified")
 		}
