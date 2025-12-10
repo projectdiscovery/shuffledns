@@ -14,6 +14,9 @@ import (
 	"github.com/rs/xid"
 )
 
+const DefaultWildcardProbeCount = 3
+const reProbeCount = 2
+
 // Resolver represents a dns resolver for removing wildcards
 type Resolver struct {
 	Domains *sliceutil.SyncSlice[string]
@@ -21,6 +24,8 @@ type Resolver struct {
 
 	levelAnswersNormalCache *mapsutil.SyncLockMap[string, struct{}]
 	wildcardAnswersCache    *mapsutil.SyncLockMap[string, wildcardAnswerCacheValue]
+
+	probeCount int
 }
 
 type wildcardAnswerCacheValue struct {
@@ -35,6 +40,7 @@ func NewResolver(domains []string, retries int, resolvers []string) (*Resolver, 
 		Domains:                 fqdns,
 		levelAnswersNormalCache: mapsutil.NewSyncLockMap[string, struct{}](),
 		wildcardAnswersCache:    mapsutil.NewSyncLockMap[string, wildcardAnswerCacheValue](),
+		probeCount:              DefaultWildcardProbeCount,
 	}
 
 	options := dnsx.DefaultOptions
@@ -47,6 +53,35 @@ func NewResolver(domains []string, retries int, resolvers []string) (*Resolver, 
 	resolver.client = dnsResolver
 
 	return resolver, nil
+}
+
+// SetProbeCount sets the number of probes to use for wildcard detection.
+// Higher values improve detection of wildcards using DNS round-robin.
+func (w *Resolver) SetProbeCount(count int) {
+	if count > 0 {
+		w.probeCount = count
+	}
+}
+
+// probeWildcardIPs probes the given wildcard pattern multiple times and returns all IPs found.
+// Returns nil if the first probe returns NXDOMAIN (not a wildcard level).
+func (w *Resolver) probeWildcardIPs(pattern string, count int) []string {
+	var ips []string
+	for i := 0; i < count; i++ {
+		probeHost := strings.ReplaceAll(pattern, "*.", xid.New().String()+".")
+		in, err := w.client.QueryOne(probeHost)
+		if err != nil {
+			continue
+		}
+		if in == nil || in.StatusCodeRaw != dns.RcodeSuccess {
+			if i == 0 {
+				return nil
+			}
+			break
+		}
+		ips = append(ips, in.A...)
+	}
+	return ips
 }
 
 // generateWildcardPermutations generates wildcard permutations for a given subdomain
@@ -134,6 +169,17 @@ func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}
 			if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
 				return true, getSyncLockMapValues(cachedValue.IPS)
 			}
+			// Cache hit but IP not found - re-probe to catch missed round-robin IPs
+			if extraIPs := w.probeWildcardIPs(original, reProbeCount); len(extraIPs) > 0 {
+				for _, record := range extraIPs {
+					wildcards[record] = struct{}{}
+					_ = cachedValue.IPS.Set(record, struct{}{})
+				}
+				_ = w.wildcardAnswersCache.Set(original, cachedValue)
+				if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
+					return true, getSyncLockMapValues(cachedValue.IPS)
+				}
+			}
 		}
 
 		// Check if this level provides a normal response
@@ -142,37 +188,25 @@ func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}
 			continue
 		}
 
-		h = strings.ReplaceAll(h, "*.", xid.New().String()+".")
-
-		// Create a dns message and send it to the server
-		in, err := w.client.QueryOne(h)
-		if err != nil {
-			continue
-		}
-		// Store this as well to be used for caching other levels
-		// so lookups don't happen as frequently.
-		// Skip the current host since we can't resolve it
-		if in != nil && in.StatusCodeRaw != dns.RcodeSuccess {
+		// Multi-probe to capture all round-robin IPs
+		probeIPs := w.probeWildcardIPs(original, w.probeCount)
+		if probeIPs == nil {
 			_ = w.levelAnswersNormalCache.Set(original, struct{}{})
 			continue
 		}
 
-		// Get all the records and add them to the wildcard map
-		for _, record := range in.A {
-			if _, ok := wildcards[record]; !ok {
-				wildcards[record] = struct{}{}
+		if len(probeIPs) > 0 {
+			if !cachedValueOk {
+				cachedValue.IPS = mapsutil.NewSyncLockMap[string, struct{}]()
 			}
-		}
-
-		if !cachedValueOk {
-			cachedValue.IPS = mapsutil.NewSyncLockMap[string, struct{}]()
-		}
-		for _, record := range in.A {
-			_ = cachedValue.IPS.Set(record, struct{}{})
-		}
-		_ = w.wildcardAnswersCache.Set(original, cachedValue)
-		if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
-			return true, getSyncLockMapValues(cachedValue.IPS)
+			for _, record := range probeIPs {
+				wildcards[record] = struct{}{}
+				_ = cachedValue.IPS.Set(record, struct{}{})
+			}
+			_ = w.wildcardAnswersCache.Set(original, cachedValue)
+			if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
+				return true, getSyncLockMapValues(cachedValue.IPS)
+			}
 		}
 	}
 
