@@ -207,6 +207,19 @@ func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}
 			if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
 				return true, getSyncLockMapValues(cachedValue.IPS)
 			}
+
+			// Resolve actual host multiple times to catch round-robin IPs
+			// This is final case tr
+			for i := 0; i < w.probeCount; i++ {
+				in, err := w.client.QueryOne(host)
+				if err == nil && in != nil && in.StatusCodeRaw == dns.RcodeSuccess {
+					for _, record := range in.A {
+						if _, ipExists := cachedValue.IPS.Get(record); ipExists {
+							return true, getSyncLockMapValues(cachedValue.IPS)
+						}
+					}
+				}
+			}
 		}
 	}
 
