@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/miekg/dns v1.1.62
-	github.com/projectdiscovery/dnsx v1.2.2
+	github.com/projectdiscovery/dnsx v1.2.3
 	github.com/projectdiscovery/goflags v0.1.74
 	github.com/projectdiscovery/gologger v1.1.64
 	github.com/projectdiscovery/retryabledns v1.0.111
