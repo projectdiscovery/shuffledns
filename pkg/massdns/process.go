@@ -402,10 +402,10 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 	store.Iterate(func(ip string, hostnames []string, counter int) {
 		for _, hostname := range hostnames {
 			// Skip if we already printed this subdomain once
-			if _, ok := uniqueMap.Has(hostname) {
+			if uniqueMap.Has(hostname) {
 				continue
 			}
-			uniqueMap.Set(hostname, struct{}{})
+			_ = uniqueMap.Set(hostname, struct{}{})
 
 			swg.Add()
 			go func(hostname string) {
