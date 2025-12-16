@@ -74,26 +74,42 @@ func (w *Resolver) probeWildcardIPs(pattern string, count int) []string {
 
 	var wg sync.WaitGroup
 	ips := sliceutil.NewSyncSlice[string]()
+	var firstQueryFailed bool
+	var firstQueryOnce sync.Once
 
 	// Launch all queries concurrently
-	for range count {
+	for i := 0; i < count; i++ {
 		wg.Add(1)
 
-		go func() {
+		go func(index int) {
 			defer wg.Done()
 
 			probeHost := strings.ReplaceAll(pattern, "*.", xid.New().String()+".")
 			in, err := w.client.QueryOne(probeHost)
 
+			// Track first query (index 0) failure for early exit behavior
+			if index == 0 {
+				firstQueryOnce.Do(func() {
+					if err != nil || in == nil || in.StatusCodeRaw != dns.RcodeSuccess {
+						firstQueryFailed = true
+					}
+				})
+			}
+
 			if err == nil && in != nil && in.StatusCodeRaw == dns.RcodeSuccess {
 				ips.Append(in.A...)
 			}
-		}()
+		}(i)
 	}
 
 	wg.Wait()
 
-	// Check if first query failed (original behavior)
+	// Check if first query failed (original behavior - return nil if first probe fails)
+	if firstQueryFailed {
+		return nil
+	}
+
+	// If no IPs collected, return nil
 	if ips.Len() == 0 {
 		return nil
 	}
