@@ -66,48 +66,55 @@ func (w *Resolver) SetProbeCount(count int) {
 
 // probeWildcardIPs probes the given wildcard pattern multiple times concurrently and returns all IPs found.
 // Returns nil if the first probe returns NXDOMAIN (not a wildcard level).
-// All queries are executed in parallel for better performance.
+// First query is executed sequentially for early exit, remaining queries run in parallel.
 func (w *Resolver) probeWildcardIPs(pattern string, count int) []string {
 	if count <= 0 {
 		return nil
 	}
 
-	var wg sync.WaitGroup
 	ips := sliceutil.NewSyncSlice[string]()
-	var firstQueryFailed bool
-	var firstQueryOnce sync.Once
 
-	// Launch all queries concurrently
-	for i := 0; i < count; i++ {
+	probe := func() ([]string, bool) {
+		probeHost := strings.ReplaceAll(pattern, "*.", xid.New().String()+".")
+		in, err := w.client.QueryOne(probeHost)
+		if err != nil || in == nil || in.StatusCodeRaw != dns.RcodeSuccess {
+			return nil, false
+		}
+		return in.A, true
+	}
+
+	// Execute first query sequentially for early exit behavior
+	resultIPs, success := probe()
+	if !success {
+		return nil
+	}
+	if len(resultIPs) > 0 {
+		ips.Append(resultIPs...)
+	}
+
+	// If only one query requested, return now
+	if count == 1 {
+		if ips.Len() == 0 {
+			return nil
+		}
+		return sliceutil.Dedupe(ips.Slice)
+	}
+
+	// Launch remaining queries concurrently
+	var wg sync.WaitGroup
+	for i := 1; i < count; i++ {
 		wg.Add(1)
-
-		go func(index int) {
+		go func() {
 			defer wg.Done()
 
-			probeHost := strings.ReplaceAll(pattern, "*.", xid.New().String()+".")
-			in, err := w.client.QueryOne(probeHost)
-
-			// Track first query (index 0) failure for early exit behavior
-			if index == 0 {
-				firstQueryOnce.Do(func() {
-					if err != nil || in == nil || in.StatusCodeRaw != dns.RcodeSuccess {
-						firstQueryFailed = true
-					}
-				})
+			resultIPs, success := probe()
+			if success && len(resultIPs) > 0 {
+				ips.Append(resultIPs...)
 			}
-
-			if err == nil && in != nil && in.StatusCodeRaw == dns.RcodeSuccess {
-				ips.Append(in.A...)
-			}
-		}(i)
+		}()
 	}
 
 	wg.Wait()
-
-	// Check if first query failed (original behavior - return nil if first probe fails)
-	if firstQueryFailed {
-		return nil
-	}
 
 	// If no IPs collected, return nil
 	if ips.Len() == 0 {
