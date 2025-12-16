@@ -311,7 +311,7 @@ func (instance *Instance) filterWildcards(st *store.Store) error {
 					default:
 					}
 
-					isWildcard, ips := instance.wildcardResolver.LookupHost(hostname, IP)
+					isWildcard, ips := instance.wildcardResolver.LookupHost(hostname, []string{IP})
 					if len(ips) > 0 {
 						for ip := range ips {
 							// we add the single ip to the wildcard list
