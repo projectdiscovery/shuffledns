@@ -94,6 +94,13 @@ func (instance *Instance) Run(ctx context.Context) error {
 		return errors.New("blank input file specified")
 	}
 
+	// Check if we need to run massdns
+	if instance.options.MassdnsRaw == "" {
+		// This case is now handled by the streaming methods in the runner
+		// The Run method is only called for raw massdns output processing
+		return errors.New("streaming processing should be used for new massdns runs")
+	}
+
 	// Create a store for storing ip metadata
 	shstore, err := store.New(instance.options.TempDir)
 	if err != nil {
@@ -101,20 +108,14 @@ func (instance *Instance) Run(ctx context.Context) error {
 	}
 	defer shstore.Close()
 
-	// Check if we need to run massdns
-	if instance.options.MassdnsRaw == "" {
-		// This case is now handled by the streaming methods in the runner
-		// The Run method is only called for raw massdns output processing
-		return errors.New("streaming processing should be used for new massdns runs")
-	} else { // parse the input file
-		gologger.Info().Msgf("Started parsing massdns input\n")
-		now := time.Now()
-		err = instance.parseMassDNSOutputFile(instance.options.MassdnsRaw, shstore)
-		if err != nil {
-			return fmt.Errorf("could not parse massdns input: %w", err)
-		}
-		gologger.Info().Msgf("Massdns input parsing completed in %s\n", time.Since(now))
+	// parse the input file
+	gologger.Info().Msgf("Started parsing massdns input\n")
+	now := time.Now()
+	err = instance.parseMassDNSOutputFile(instance.options.MassdnsRaw, shstore)
+	if err != nil {
+		return fmt.Errorf("could not parse massdns input: %w", err)
 	}
+	gologger.Info().Msgf("Massdns input parsing completed in %s\n", time.Since(now))
 
 	if instance.options.AutoExtractRootDomains {
 		gologger.Info().Msgf("Started extracting root domains\n")
@@ -140,7 +141,7 @@ func (instance *Instance) Run(ctx context.Context) error {
 	gologger.Info().Msgf("Finished enumeration, started writing output\n")
 
 	// Write the final elaborated list out
-	now := time.Now()
+	now = time.Now()
 	err = instance.writeOutput(shstore)
 	if err != nil {
 		return fmt.Errorf("could not write output: %w", err)
@@ -235,6 +236,10 @@ func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.St
 
 	err := parser.ParseFile(tmpFile, func(domain string, ips []string) error {
 		for _, ip := range ips {
+			// Filter out 0.0.0.0 always, and internal IPs if flag is set
+			if instance.shouldFilterIP(ip) {
+				continue
+			}
 			bulkWriter.Append(item{ip: ip, domain: domain})
 		}
 		return nil

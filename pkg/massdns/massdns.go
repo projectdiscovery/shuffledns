@@ -50,6 +50,8 @@ type Options struct {
 	KeepStderr bool
 	// BatchSize controls the number of lines per chunk for incremental processing
 	BatchSize int
+	// FilterInternalIPs controls whether to filter out internal/private IP addresses
+	FilterInternalIPs bool
 
 	OnResult func(*retryabledns.DNSData)
 }
@@ -81,4 +83,9 @@ func New(options Options) (*Instance, error) {
 	}
 
 	return instance, nil
+}
+
+// DumpWildcardsToFile dumps all wildcard IPs to the specified file
+func (instance *Instance) DumpWildcardsToFile(file string) error {
+	return instance.wildcardStore.SaveToFile(file)
 }
