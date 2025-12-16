@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/projectdiscovery/dnsx/libs/dnsx"
@@ -21,6 +22,7 @@ import (
 	"github.com/projectdiscovery/utils/batcher"
 	fileutil "github.com/projectdiscovery/utils/file"
 	ioutil "github.com/projectdiscovery/utils/io"
+	mapsutil "github.com/projectdiscovery/utils/maps"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/weppos/publicsuffix-go/publicsuffix"
 )
@@ -53,7 +55,7 @@ func (instance *Instance) RunWithContext(ctx context.Context) (stdout, stderr st
 	// Run the command on a temp file and wait for the output
 	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", instance.options.InputFile, "-s", strconv.Itoa(instance.options.Threads)}
 	if instance.options.MassDnsCmd != "" {
-		args = append(args, strings.Split(instance.options.MassDnsCmd, " ")...)
+		args = append(args, strings.Fields(instance.options.MassDnsCmd)...)
 	}
 
 	cmd := exec.CommandContext(ctx, instance.options.MassdnsPath, args...)
@@ -178,7 +180,7 @@ func (instance *Instance) runChunk(ctx context.Context, chunkFile string) (stdou
 	// Run the command on the chunk file
 	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", chunkFile, "-s", strconv.Itoa(instance.options.Threads)}
 	if instance.options.MassDnsCmd != "" {
-		args = append(args, strings.Split(instance.options.MassDnsCmd, " ")...)
+		args = append(args, strings.Fields(instance.options.MassDnsCmd)...)
 	}
 
 	cmd := exec.CommandContext(ctx, instance.options.MassdnsPath, args...)
@@ -374,10 +376,10 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 		}
 	}
 
-	uniqueMap := make(map[string]struct{})
+	uniqueMap := mapsutil.NewSyncLockMap[string, struct{}]()
 
 	// write count of resolved hosts
-	resolvedCount := 0
+	var resolvedCount atomic.Int32
 
 	// if trusted resolvers are specified verify the results
 	var dnsResolver *dnsx.DNSX
@@ -400,10 +402,10 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 	store.Iterate(func(ip string, hostnames []string, counter int) {
 		for _, hostname := range hostnames {
 			// Skip if we already printed this subdomain once
-			if _, ok := uniqueMap[hostname]; ok {
+			if uniqueMap.Has(hostname) {
 				continue
 			}
-			uniqueMap[hostname] = struct{}{}
+			_ = uniqueMap.Set(hostname, struct{}{})
 
 			swg.Add()
 			go func(hostname string) {
@@ -451,14 +453,14 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 					_, _ = safeWriter.Write([]byte(data))
 				}
 				gologger.Silent().Msgf("%s", data)
-				resolvedCount++
+				resolvedCount.Add(1)
 			}(hostname)
 		}
 	})
 
 	swg.Wait()
 
-	gologger.Info().Msgf("Total resolved: %d\n", resolvedCount)
+	gologger.Info().Msgf("Total resolved: %d\n", resolvedCount.Load())
 
 	// Close the files and return
 	if output != nil {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/miekg/dns"
 	"github.com/projectdiscovery/dnsx/libs/dnsx"
@@ -63,25 +64,64 @@ func (w *Resolver) SetProbeCount(count int) {
 	}
 }
 
-// probeWildcardIPs probes the given wildcard pattern multiple times and returns all IPs found.
+// probeWildcardIPs probes the given wildcard pattern multiple times concurrently and returns all IPs found.
 // Returns nil if the first probe returns NXDOMAIN (not a wildcard level).
+// First query is executed sequentially for early exit, remaining queries run in parallel.
 func (w *Resolver) probeWildcardIPs(pattern string, count int) []string {
-	var ips []string
-	for i := 0; i < count; i++ {
+	if count <= 0 {
+		return nil
+	}
+
+	ips := sliceutil.NewSyncSlice[string]()
+
+	probe := func() ([]string, bool) {
 		probeHost := strings.ReplaceAll(pattern, "*.", xid.New().String()+".")
 		in, err := w.client.QueryOne(probeHost)
-		if err != nil {
-			continue
+		if err != nil || in == nil || in.StatusCodeRaw != dns.RcodeSuccess {
+			return nil, false
 		}
-		if in == nil || in.StatusCodeRaw != dns.RcodeSuccess {
-			if i == 0 {
-				return nil
-			}
-			break
-		}
-		ips = append(ips, in.A...)
+		return in.A, true
 	}
-	return ips
+
+	// Execute first query sequentially for early exit behavior
+	resultIPs, success := probe()
+	if !success {
+		return nil
+	}
+	if len(resultIPs) > 0 {
+		ips.Append(resultIPs...)
+	}
+
+	// If only one query requested, return now
+	if count == 1 {
+		if ips.Len() == 0 {
+			return nil
+		}
+		return sliceutil.Dedupe(ips.Slice)
+	}
+
+	// Launch remaining queries concurrently
+	var wg sync.WaitGroup
+	for i := 1; i < count; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			resultIPs, success := probe()
+			if success && len(resultIPs) > 0 {
+				ips.Append(resultIPs...)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	// If no IPs collected, return nil
+	if ips.Len() == 0 {
+		return nil
+	}
+
+	return sliceutil.Dedupe(ips.Slice)
 }
 
 // generateWildcardPermutations generates wildcard permutations for a given subdomain
@@ -112,15 +152,6 @@ func generateWildcardPermutations(subdomain, domain string) []string {
 		builder.Reset()
 	}
 	return hosts
-}
-
-func getSyncLockMapValues(m *mapsutil.SyncLockMap[string, struct{}]) map[string]struct{} {
-	values := make(map[string]struct{})
-	_ = m.Iterate(func(key string, value struct{}) error {
-		values[key] = value
-		return nil
-	})
-	return values
 }
 
 // LookupHost returns wildcard IP addresses of a wildcard if it's a wildcard.
@@ -168,7 +199,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 		if cachedValueOk {
 			for _, knownIP := range knownIPs {
 				if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
-					return true, getSyncLockMapValues(cachedValue.IPS)
+					return true, cachedValue.IPS.Map
 				}
 			}
 			// Cache hit but IP not found - re-probe to catch missed round-robin IPs
@@ -180,7 +211,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 				_ = w.wildcardAnswersCache.Set(original, cachedValue)
 				for _, knownIP := range knownIPs {
 					if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
-						return true, getSyncLockMapValues(cachedValue.IPS)
+						return true, cachedValue.IPS.Map
 					}
 				}
 			}
@@ -210,7 +241,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 			_ = w.wildcardAnswersCache.Set(original, cachedValue)
 			for _, knownIP := range knownIPs {
 				if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
-					return true, getSyncLockMapValues(cachedValue.IPS)
+					return true, cachedValue.IPS.Map
 				}
 			}
 
@@ -221,7 +252,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 				if err == nil && in != nil && in.StatusCodeRaw == dns.RcodeSuccess {
 					for _, record := range in.A {
 						if _, ipExists := cachedValue.IPS.Get(record); ipExists {
-							return true, getSyncLockMapValues(cachedValue.IPS)
+							return true, cachedValue.IPS.Map
 						}
 					}
 				}
