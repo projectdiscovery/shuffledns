@@ -127,6 +127,7 @@ func (r *Runner) processDomain() {
 		MassDnsCmd:             r.options.MassDnsCmd,
 		KeepStderr:             r.options.KeepStderr,
 		BatchSize:              r.options.BatchSize,
+		FilterInternalIPs:      r.options.FilterInternalIPs,
 		OnResult:               r.options.OnResult,
 	})
 	if err != nil {
@@ -169,6 +170,7 @@ func (r *Runner) processSubdomains() {
 		MassDnsCmd:             r.options.MassDnsCmd,
 		KeepStderr:             r.options.KeepStderr,
 		BatchSize:              r.options.BatchSize,
+		FilterInternalIPs:      r.options.FilterInternalIPs,
 		OnResult:               r.options.OnResult,
 	})
 	if err != nil {
@@ -231,6 +233,7 @@ func (r *Runner) processExistingOutput() {
 		MassDnsCmd:             r.options.MassDnsCmd,
 		KeepStderr:             r.options.KeepStderr,
 		BatchSize:              r.options.BatchSize,
+		FilterInternalIPs:      r.options.FilterInternalIPs,
 		OnResult:               r.options.OnResult,
 	})
 	if err != nil {

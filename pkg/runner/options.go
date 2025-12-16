@@ -42,6 +42,7 @@ type Options struct {
 	Mode                   string
 	KeepStderr             bool // KeepStderr controls whether to capture and store massdns stderr output
 	BatchSize              int  // BatchSize controls the number of lines per chunk for incremental processing
+	FilterInternalIPs      bool // FilterInternalIPs controls whether to filter out internal/private IP addresses
 
 	OnResult func(*retryabledns.DNSData)
 }
@@ -98,6 +99,7 @@ func ParseOptions() *Options {
 		flagSet.IntVar(&options.WildcardThreads, "wt", 250, "Number of concurrent wildcard checks"),
 		flagSet.BoolVar(&options.KeepStderr, "retain-stderr", false, "Capture and store massdns stderr output (default: discard)"),
 		flagSet.IntVar(&options.BatchSize, "batch-size", DefaultBatchSize, "Number of lines per chunk for incremental processing"),
+		flagSet.BoolVar(&options.FilterInternalIPs, "filter-internal-ips", false, "Filter out internal/private IP addresses (0.0.0.0 is always filtered)"),
 	)
 
 	flagSet.CreateGroup("debug", "Debug",
