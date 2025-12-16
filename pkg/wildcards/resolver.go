@@ -127,7 +127,7 @@ func getSyncLockMapValues(m *mapsutil.SyncLockMap[string, struct{}]) map[string]
 // To determine, first we split the target host by dots, create permutation
 // of it's levels, check for wildcard on each one of them and if found any,
 // we remove all the hosts that have this IP from the map.
-func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}) {
+func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]struct{}) {
 	wildcards := make(map[string]struct{})
 
 	var domain string
@@ -166,8 +166,10 @@ func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}
 		// and it is used always for resolutions in future.
 		cachedValue, cachedValueOk := w.wildcardAnswersCache.Get(original)
 		if cachedValueOk {
-			if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
-				return true, getSyncLockMapValues(cachedValue.IPS)
+			for _, knownIP := range knownIPs {
+				if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
+					return true, getSyncLockMapValues(cachedValue.IPS)
+				}
 			}
 			// Cache hit but IP not found - re-probe to catch missed round-robin IPs
 			if extraIPs := w.probeWildcardIPs(original, reProbeCount); len(extraIPs) > 0 {
@@ -176,8 +178,10 @@ func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}
 					_ = cachedValue.IPS.Set(record, struct{}{})
 				}
 				_ = w.wildcardAnswersCache.Set(original, cachedValue)
-				if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
-					return true, getSyncLockMapValues(cachedValue.IPS)
+				for _, knownIP := range knownIPs {
+					if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
+						return true, getSyncLockMapValues(cachedValue.IPS)
+					}
 				}
 			}
 		}
@@ -204,8 +208,10 @@ func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}
 				_ = cachedValue.IPS.Set(record, struct{}{})
 			}
 			_ = w.wildcardAnswersCache.Set(original, cachedValue)
-			if _, ipExists := cachedValue.IPS.Get(ip); ipExists {
-				return true, getSyncLockMapValues(cachedValue.IPS)
+			for _, knownIP := range knownIPs {
+				if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
+					return true, getSyncLockMapValues(cachedValue.IPS)
+				}
 			}
 
 			// Resolve actual host multiple times to catch round-robin IPs
@@ -223,9 +229,11 @@ func (w *Resolver) LookupHost(host string, ip string) (bool, map[string]struct{}
 		}
 	}
 
-	// check if original ip are among wildcards
-	if _, ok := wildcards[ip]; ok {
-		return true, wildcards
+	// check if any of the knownIPs are among wildcards
+	for _, knownIP := range knownIPs {
+		if _, ok := wildcards[knownIP]; ok {
+			return true, wildcards
+		}
 	}
 
 	return false, wildcards

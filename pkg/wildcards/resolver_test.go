@@ -44,7 +44,7 @@ func Test_Resolver_LookupHost(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, ips)
 
-		return resolver.LookupHost(subdomain, ips[0])
+		return resolver.LookupHost(subdomain, ips)
 	}
 	t.Run("normal", func(t *testing.T) {
 		isWildcard, wildcards := lookupAndResolve("www.google.com", resolver)

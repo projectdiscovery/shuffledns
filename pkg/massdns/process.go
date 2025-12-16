@@ -277,65 +277,68 @@ func (instance *Instance) autoExtractRootDomains(store *store.Store) error {
 }
 
 func (instance *Instance) filterWildcards(st *store.Store) error {
-	// Start to work in parallel on wildcards
-	wildcardWg := sizedwaitgroup.New(instance.options.WildcardsThreads)
-
-	var allCancelFunc []context.CancelFunc
+	// Build hostname -> IPs map to avoid redundant DNS queries
+	hostnameToIPs := make(map[string][]string)
+	hostnameCounters := make(map[string]int)
 
 	st.Iterate(func(ip string, hostnames []string, counter int) {
-		ipCtx, ipCancelFunc := context.WithCancel(context.Background())
-		allCancelFunc = append(allCancelFunc, ipCancelFunc)
-		// We've stumbled upon a wildcard, just ignore it.
-		if instance.wildcardStore.Has(ip) {
-			return
-		}
-
-		// Perform wildcard detection on the ip, if an IP is found in the wildcard
-		// we add it to the wildcard map so that further runs don't require such filtering again.
-		if counter >= 5 || instance.options.StrictWildcard {
-			for _, hostname := range hostnames {
-				wildcardWg.Add()
-				go func(ctx context.Context, ipCancelFunc context.CancelFunc, IP string, hostname string) {
-					defer wildcardWg.Done()
-
-					gologger.Info().Msgf("Started filtering wildcards for %s\n", hostname)
-
-					select {
-					case <-ctx.Done():
-						return
-					default:
-					}
-
-					isWildcard, ips := instance.wildcardResolver.LookupHost(hostname, IP)
-					if len(ips) > 0 {
-						for ip := range ips {
-							// we add the single ip to the wildcard list
-							if err := instance.wildcardStore.Set(ip); err != nil {
-								gologger.Error().Msgf("could not set wildcard ip: %s", err)
-							}
-							gologger.Info().Msgf("Removing wildcard %s\n", ip)
-						}
-					}
-
-					if isWildcard {
-						// we also mark the original ip as wildcard, since at least once it resolved to this host
-						if err := instance.wildcardStore.Set(IP); err != nil {
-							gologger.Error().Msgf("could not set wildcard ip: %s", err)
-						}
-						ipCancelFunc()
-						gologger.Info().Msgf("Removed wildcard %s\n", IP)
-					}
-
-				}(ipCtx, ipCancelFunc, ip, hostname)
+		for _, hostname := range hostnames {
+			hostnameToIPs[hostname] = append(hostnameToIPs[hostname], ip)
+			if counter > hostnameCounters[hostname] {
+				hostnameCounters[hostname] = counter
 			}
 		}
 	})
 
-	wildcardWg.Wait()
+	// Start to work in parallel on wildcards
+	wildcardWg := sizedwaitgroup.New(instance.options.WildcardsThreads)
 
-	for _, cancelFunc := range allCancelFunc {
-		cancelFunc()
+	for hostname, ips := range hostnameToIPs {
+		// Skip if any IP is already marked as wildcard
+		hasWildcardIP := false
+		for _, ip := range ips {
+			if instance.wildcardStore.Has(ip) {
+				hasWildcardIP = true
+				break
+			}
+		}
+		if hasWildcardIP {
+			continue
+		}
+
+		counter := hostnameCounters[hostname]
+		// Perform wildcard detection on the hostname if counter >= 5 or strict mode
+		if counter >= 5 || instance.options.StrictWildcard {
+			wildcardWg.Add()
+			go func(hostname string, ips []string) {
+				defer wildcardWg.Done()
+
+				gologger.Info().Msgf("Started filtering wildcards for %s (with %d IPs)\n", hostname, len(ips))
+
+				isWildcard, wildcardIPs := instance.wildcardResolver.LookupHost(hostname, ips)
+				if len(wildcardIPs) > 0 {
+					for ip := range wildcardIPs {
+						if err := instance.wildcardStore.Set(ip); err != nil {
+							gologger.Error().Msgf("could not set wildcard ip: %s", err)
+						}
+						gologger.Info().Msgf("Removing wildcard %s\n", ip)
+					}
+				}
+
+				if isWildcard {
+					for _, ip := range ips {
+						if err := instance.wildcardStore.Set(ip); err != nil {
+							gologger.Error().Msgf("could not set wildcard ip: %s", err)
+						}
+					}
+					gologger.Info().Msgf("Removed wildcard hostname %s with %d IPs\n", hostname, len(ips))
+				}
+
+			}(hostname, ips)
+		}
 	}
+
+	wildcardWg.Wait()
 
 	// Do a second pass as well and remove all the wildcards
 	// from the store that we have found so that everything is covered
