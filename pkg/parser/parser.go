@@ -57,7 +57,7 @@ func ParseReader(reader io.Reader, onResult OnResultFN) error {
 		} else {
 			// Non empty line represents DNS answer section, we split on space,
 			// iterate over all the parts, and write the answer to the struct.
-			parts := strings.Split(text, " ")
+			parts := strings.Fields(text)
 
 			if len(parts) != 3 {
 				continue

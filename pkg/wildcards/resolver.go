@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/miekg/dns"
 	"github.com/projectdiscovery/dnsx/libs/dnsx"
@@ -63,25 +64,40 @@ func (w *Resolver) SetProbeCount(count int) {
 	}
 }
 
-// probeWildcardIPs probes the given wildcard pattern multiple times and returns all IPs found.
+// probeWildcardIPs probes the given wildcard pattern multiple times concurrently and returns all IPs found.
 // Returns nil if the first probe returns NXDOMAIN (not a wildcard level).
+// All queries are executed in parallel for better performance.
 func (w *Resolver) probeWildcardIPs(pattern string, count int) []string {
-	var ips []string
-	for i := 0; i < count; i++ {
-		probeHost := strings.ReplaceAll(pattern, "*.", xid.New().String()+".")
-		in, err := w.client.QueryOne(probeHost)
-		if err != nil {
-			continue
-		}
-		if in == nil || in.StatusCodeRaw != dns.RcodeSuccess {
-			if i == 0 {
-				return nil
-			}
-			break
-		}
-		ips = append(ips, in.A...)
+	if count <= 0 {
+		return nil
 	}
-	return ips
+
+	var wg sync.WaitGroup
+	ips := sliceutil.NewSyncSlice[string]()
+
+	// Launch all queries concurrently
+	for i := 0; i < count; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			probeHost := strings.ReplaceAll(pattern, "*.", xid.New().String()+".")
+			in, err := w.client.QueryOne(probeHost)
+
+			if err == nil && in != nil && in.StatusCodeRaw == dns.RcodeSuccess {
+				ips.Append(in.A...)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	// Check if first query failed (original behavior)
+	if ips.Len() == 0 {
+		return nil
+	}
+
+	return sliceutil.Dedupe(ips.Slice)
 }
 
 // generateWildcardPermutations generates wildcard permutations for a given subdomain
@@ -112,15 +128,6 @@ func generateWildcardPermutations(subdomain, domain string) []string {
 		builder.Reset()
 	}
 	return hosts
-}
-
-func getSyncLockMapValues(m *mapsutil.SyncLockMap[string, struct{}]) map[string]struct{} {
-	values := make(map[string]struct{})
-	_ = m.Iterate(func(key string, value struct{}) error {
-		values[key] = value
-		return nil
-	})
-	return values
 }
 
 // LookupHost returns wildcard IP addresses of a wildcard if it's a wildcard.
@@ -168,7 +175,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 		if cachedValueOk {
 			for _, knownIP := range knownIPs {
 				if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
-					return true, getSyncLockMapValues(cachedValue.IPS)
+					return true, cachedValue.IPS.Map
 				}
 			}
 			// Cache hit but IP not found - re-probe to catch missed round-robin IPs
@@ -180,7 +187,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 				_ = w.wildcardAnswersCache.Set(original, cachedValue)
 				for _, knownIP := range knownIPs {
 					if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
-						return true, getSyncLockMapValues(cachedValue.IPS)
+						return true, cachedValue.IPS.Map
 					}
 				}
 			}
@@ -210,7 +217,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 			_ = w.wildcardAnswersCache.Set(original, cachedValue)
 			for _, knownIP := range knownIPs {
 				if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
-					return true, getSyncLockMapValues(cachedValue.IPS)
+					return true, cachedValue.IPS.Map
 				}
 			}
 
@@ -221,7 +228,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 				if err == nil && in != nil && in.StatusCodeRaw == dns.RcodeSuccess {
 					for _, record := range in.A {
 						if _, ipExists := cachedValue.IPS.Get(record); ipExists {
-							return true, getSyncLockMapValues(cachedValue.IPS)
+							return true, cachedValue.IPS.Map
 						}
 					}
 				}
