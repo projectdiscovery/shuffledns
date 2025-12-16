@@ -76,8 +76,9 @@ func (w *Resolver) probeWildcardIPs(pattern string, count int) []string {
 	ips := sliceutil.NewSyncSlice[string]()
 
 	// Launch all queries concurrently
-	for i := 0; i < count; i++ {
+	for range count {
 		wg.Add(1)
+
 		go func() {
 			defer wg.Done()
 
