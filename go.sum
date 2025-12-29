@@ -213,8 +213,8 @@ github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c h1:ncq/mPwQF
 github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c/go.mod h1:OmDBASR4679mdNQnz2pUhc2G8CO2JrUAVFDRBDP/hJE=
 github.com/projectdiscovery/blackrock v0.0.1 h1:lHQqhaaEFjgf5WkuItbpeCZv2DUIE45k0VbGJyft6LQ=
 github.com/projectdiscovery/blackrock v0.0.1/go.mod h1:ANUtjDfaVrqB453bzToU+YB4cUbvBRpLvEwoWIwlTss=
-github.com/projectdiscovery/cdncheck v1.2.15 h1:07ati3QcI65HEWP6GgHoTtit6cfu5InEx87rpwoWios=
-github.com/projectdiscovery/cdncheck v1.2.15/go.mod h1:Q9HNh2uzO/qFdl8C4RUWOHj3qIhxlaBFeayPQJm2zII=
+github.com/projectdiscovery/cdncheck v1.2.16 h1:m6sQh5VAWN2sVp3o8LSFtAfnv3V0Dpoqqw83ZwnrA2c=
+github.com/projectdiscovery/cdncheck v1.2.16/go.mod h1:2OsjLn4x7VsM+ZNccGU185pd43U+0h5gDDStU0GtNl8=
 github.com/projectdiscovery/dnsx v1.2.3 h1:S87U9kYuuqqvMFyen8mZQy1FMuR5EGCsXHqfHPQAeuc=
 github.com/projectdiscovery/dnsx v1.2.3/go.mod h1:NjAEyJt6+meNqZqnYHL4ZPxXfysuva+et56Eq/e1cVE=
 github.com/projectdiscovery/goflags v0.1.74 h1:n85uTRj5qMosm0PFBfsvOL24I7TdWRcWq/1GynhXS7c=
