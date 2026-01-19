@@ -12,7 +12,7 @@ require (
 	github.com/rs/xid v1.5.0
 	github.com/stretchr/testify v1.11.1
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/weppos/publicsuffix-go v0.40.3-0.20250408071509-6074bbe7fd39
+	github.com/weppos/publicsuffix-go v0.50.3-0.20260104170930-90713dec78f2
 )
 
 require (
@@ -28,11 +28,11 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/projectdiscovery/utils v0.8.0
+	github.com/projectdiscovery/utils v0.9.0
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	golang.org/x/mod v0.30.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/tools v0.39.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
@@ -101,10 +101,10 @@ require (
 	github.com/zcalusic/sysinfo v1.0.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 )
