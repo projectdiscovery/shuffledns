@@ -7,9 +7,8 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: write
   pull-requests: write
-  issues: write
-  repository-projects: write
 
 jobs:
   automerge:
@@ -18,3 +17,5 @@ jobs:
     steps:
       - uses: projectdiscovery/actions/pr/approve@v1
       - uses: projectdiscovery/actions/pr/merge@v1
+        with:
+          auto: false
