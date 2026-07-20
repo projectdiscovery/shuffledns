@@ -11,6 +11,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -160,7 +161,13 @@ func main() {
 			if ckpt != nil && ckpt.Has(name) {
 				continue
 			}
-			input <- name
+			// Stop feeding once the consumer is gone (interrupt), otherwise this
+			// send blocks forever on a full buffer and leaks the producer.
+			select {
+			case input <- name:
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 
@@ -179,7 +186,10 @@ func main() {
 			OnResult:  func(r *resolve.Result) { onResult(*r) },
 			OnError:   onError,
 		})
-		if err != nil {
+		// A cancelled context is a user interrupt (Ctrl-C / SIGTERM), not a
+		// failure: fall through so buffered output and the checkpoint are flushed
+		// by the deferred cleanups instead of being lost to os.Exit.
+		if err != nil && !errors.Is(err, context.Canceled) {
 			fatal("resolution failed: %v", err)
 		}
 	} else {
@@ -220,7 +230,7 @@ func main() {
 		if err := resolve.DropPrivileges(cfg.dropUser, cfg.dropGroup, cfg.keepRoot); err != nil {
 			fatal("privilege drop: %v", err)
 		}
-		if err := client.Run(ctx, input); err != nil {
+		if err := client.Run(ctx, input); err != nil && !errors.Is(err, context.Canceled) {
 			fatal("resolution failed: %v", err)
 		}
 	}
