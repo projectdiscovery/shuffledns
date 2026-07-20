@@ -91,17 +91,24 @@ func (s *Store) Iterate(f func(ip string, hostnames []string, counter int)) {
 	// snapshot under lock to avoid holding it during the callback (which may
 	// perform network I/O during wildcard filtering)
 	s.mu.RLock()
+	ips := make([]string, 0, len(s.data))
 	snapshot := make(map[string][]string, len(s.data))
 	for ip, hostnameMap := range s.data {
 		hostnames := make([]string, 0, len(hostnameMap))
 		for hostname := range hostnameMap {
 			hostnames = append(hostnames, hostname)
 		}
+		sort.Strings(hostnames)
 		snapshot[ip] = hostnames
+		ips = append(ips, ip)
 	}
 	s.mu.RUnlock()
 
-	for ip, hostnames := range snapshot {
+	// Iterate in sorted order so output is deterministic across runs (the map
+	// backing replaced a LevelDB store that iterated in sorted key order).
+	sort.Strings(ips)
+	for _, ip := range ips {
+		hostnames := snapshot[ip]
 		f(ip, hostnames, len(hostnames))
 	}
 }
