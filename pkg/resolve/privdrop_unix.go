@@ -35,6 +35,12 @@ func DropPrivileges(username, groupname string, keepRoot bool) error {
 	if err != nil {
 		return err
 	}
+	// Drop root's supplementary groups before setgid/setuid; otherwise the
+	// process keeps root's group memberships after the drop (a classic
+	// incomplete-privilege-drop gap). Must happen while still privileged.
+	if err := unix.Setgroups([]int{gid}); err != nil {
+		return fmt.Errorf("setgroups(%s): %w", groupname, err)
+	}
 	if err := unix.Setgid(gid); err != nil {
 		return fmt.Errorf("setgid(%s): %w", groupname, err)
 	}
