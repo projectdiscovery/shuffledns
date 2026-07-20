@@ -32,6 +32,9 @@ type Config struct {
 	Nameservers []string
 	// Timeout is the per-nameserver transfer timeout. Default 10s.
 	Timeout time.Duration
+	// MaxNames caps the owner names kept from a single transfer, bounding memory
+	// against a hostile server that streams an endless zone. Default 1,000,000.
+	MaxNames int
 	// OnName fires for each newly discovered owner name (deduplicated).
 	OnName func(string)
 	// OnNameserver fires after each nameserver attempt with its outcome.
@@ -55,6 +58,9 @@ func Attempt(ctx context.Context, cfg Config) (*Result, error) {
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = 10 * time.Second
+	}
+	if cfg.MaxNames <= 0 {
+		cfg.MaxNames = 1_000_000
 	}
 	apex := dns.Fqdn(strings.ToLower(cfg.Zone))
 
@@ -106,6 +112,24 @@ func transferFrom(ctx context.Context, apex, nsAddr string, cfg Config) (*Result
 		}
 		res := &Result{Nameserver: nsAddr}
 		seen := map[string]struct{}{}
+		// abandoning `ch` mid-stream would block miekg's sender goroutine forever
+		// on its unbuffered channel send (leaking the goroutine and the TCP conn).
+		// stop() unblocks that send by draining and closes the conn so the sender
+		// returns promptly instead of waiting out another read timeout.
+		stopped := false
+		stop := func() {
+			if stopped {
+				return
+			}
+			stopped = true
+			go func() {
+				for range ch {
+				}
+			}()
+			if t.Conn != nil {
+				_ = t.Conn.Close()
+			}
+		}
 		for env := range ch {
 			if env.Error != nil {
 				if len(res.Names) > 0 {
@@ -128,8 +152,13 @@ func transferFrom(ctx context.Context, apex, nsAddr string, cfg Config) (*Result
 				if cfg.OnName != nil {
 					cfg.OnName(owner)
 				}
+				if len(res.Names) >= cfg.MaxNames {
+					stop()
+					return res, nil
+				}
 			}
 			if err := ctx.Err(); err != nil {
+				stop()
 				return res, err
 			}
 		}

@@ -10,6 +10,13 @@ import (
 	"github.com/miekg/dns"
 )
 
+// maxNSEC3Iterations caps the SHA-1 iteration count we are willing to process.
+// dns.HashName runs iter extra SHA-1 rounds per hash and the target controls
+// iter (up to 65535); crack does len(candidates)*len(harvested) hashes, so a
+// hostile zone advertising a huge count could burn billions of SHA-1 ops.
+// RFC 9276 treats anything above a small number as unreasonable.
+const maxNSEC3Iterations = 500
+
 // CrackConfig controls an NSEC3 harvest-and-crack.
 type CrackConfig struct {
 	// Zone is the NSEC3-signed apex to enumerate (e.g. "example.com").
@@ -116,6 +123,12 @@ func CrackNSEC3(ctx context.Context, cfg CrackConfig) (*CrackResult, error) {
 			continue
 		}
 		collect(resp)
+		// Bail before any expensive Cover/Match on the next iteration if the zone
+		// advertises an abusive iteration count.
+		if res.Iterations > maxNSEC3Iterations {
+			res.HarvestedHashes = len(harvested)
+			return res, fmt.Errorf("nsec3 iterations %d exceed cap %d; refusing to crack (DoS risk)", res.Iterations, maxNSEC3Iterations)
+		}
 	}
 	res.HarvestedHashes = len(harvested)
 

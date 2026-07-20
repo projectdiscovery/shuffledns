@@ -28,8 +28,10 @@ type Config struct {
 	Resolvers []string
 	// Timeout is the per-query timeout. Default 5s.
 	Timeout time.Duration
-	// MaxNames caps the number of discovered names (0 = unlimited). A safety
-	// valve against pathological/looping chains.
+	// MaxNames caps the number of discovered names. A safety valve against
+	// pathological chains that emit endless distinct names. Default 1,000,000
+	// when unset (<= 0); the visited-set and apex-wrap checks already stop
+	// well-formed chains, this bounds hostile ones.
 	MaxNames int
 	// OnName is an optional callback fired for each newly discovered name.
 	OnName func(string)
@@ -60,6 +62,9 @@ func Walk(ctx context.Context, cfg Config) (*Result, error) {
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = 5 * time.Second
+	}
+	if cfg.MaxNames <= 0 {
+		cfg.MaxNames = 1_000_000
 	}
 	server := normalize(cfg.Resolvers[0])
 	apex := dns.Fqdn(strings.ToLower(cfg.Zone))
