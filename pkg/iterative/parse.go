@@ -64,7 +64,34 @@ func buildResult(name string, qtype uint16, resp *dns.Msg, server string, cnameC
 		Timestamp: time.Now(),
 		CNAME:     append([]string{}, cnameChain...),
 	}
+	// Only harvest records owned by the queried name or a name reached through
+	// its CNAME chain. Without this an in-bailiwick-but-hostile (or lame)
+	// authoritative could staple unrelated A/AAAA records for other owners into
+	// this name's result.
+	validOwners := map[string]struct{}{canonical(name): {}}
+	for _, c := range cnameChain {
+		validOwners[canonical(c)] = struct{}{}
+	}
+	for changed := true; changed; {
+		changed = false
+		for _, rr := range resp.Answer {
+			c, ok := rr.(*dns.CNAME)
+			if !ok {
+				continue
+			}
+			if _, in := validOwners[canonical(c.Header().Name)]; !in {
+				continue
+			}
+			if tgt := canonical(c.Target); !mapHas(validOwners, tgt) {
+				validOwners[tgt] = struct{}{}
+				changed = true
+			}
+		}
+	}
 	for _, rr := range resp.Answer {
+		if _, ok := validOwners[canonical(rr.Header().Name)]; !ok {
+			continue
+		}
 		switch v := rr.(type) {
 		case *dns.A:
 			r.A = append(r.A, v.A.String())
@@ -121,6 +148,11 @@ func mergeCNAME(name string, qtype uint16, chain []string, server string, sub *r
 		out.Resolver = sub.Resolver
 	}
 	return out
+}
+
+func mapHas(m map[string]struct{}, k string) bool {
+	_, ok := m[k]
+	return ok
 }
 
 func contains(s []string, v string) bool {
