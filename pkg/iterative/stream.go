@@ -39,23 +39,43 @@ func (r *Resolver) ResolveStream(ctx context.Context, names <-chan string, cfg S
 			ex, err := r.newExchanger()
 			if err != nil {
 				// a worker that cannot open a socket simply drains its share;
-				// other workers continue. Report once per failed name.
-				for name := range names {
-					if cfg.OnError != nil {
-						cfg.OnError(strings.TrimSpace(name), err)
+				// other workers continue. Report once per failed name. Stop on
+				// cancellation so an idle producer can't wedge the drain.
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case name, ok := <-names:
+						if !ok {
+							return
+						}
+						if cfg.OnError != nil {
+							cfg.OnError(strings.TrimSpace(name), err)
+						}
 					}
 				}
-				return
 			}
 			defer ex.close()
 			s := &session{r: r, ex: ex}
-			for name := range names {
+			for {
+				// Select on ctx.Done() as well as the channel: a plain range
+				// blocks on an idle-but-open producer, so a cancelled ctx would
+				// never unblock the worker and ResolveStream would hang.
+				var (
+					name string
+					ok   bool
+				)
+				select {
+				case <-ctx.Done():
+					return
+				case name, ok = <-names:
+					if !ok {
+						return
+					}
+				}
 				name = strings.TrimSpace(name)
 				if name == "" {
 					continue
-				}
-				if ctx.Err() != nil {
-					return
 				}
 				res, rerr := s.resolve(ctx, name, qtype)
 				if rerr != nil {
