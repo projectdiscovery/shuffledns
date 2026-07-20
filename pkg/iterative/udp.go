@@ -68,7 +68,12 @@ func (u *udpExchanger) exchange(ctx context.Context, server netip.AddrPort, msg 
 				}
 				return nil, rerr
 			}
-			if !from.AddrPort().Addr().Unmap().IsValid() || from.AddrPort() != server {
+			// On a dual-stack ("udp") socket an IPv4 server's reply arrives as a
+			// 4-in-6 address, so compare against the unmapped form; otherwise every
+			// IPv4 response is dropped when IPv6 mode is enabled.
+			fromAP := from.AddrPort()
+			fromNorm := netip.AddrPortFrom(fromAP.Addr().Unmap(), fromAP.Port())
+			if !fromNorm.Addr().IsValid() || fromNorm != server {
 				continue // source-address verification (anti off-path spoofing)
 			}
 			resp := new(dns.Msg)
