@@ -602,8 +602,14 @@ func (instance *Instance) ProcessDomainStreaming(ctx context.Context, wordlistFi
 				continue
 			}
 			for _, domain := range instance.options.Domains {
-				out <- text + "." + domain
-				permutationCount.Add(1)
+				// Stop on cancellation so the producer can't wedge on a full
+				// channel once the resolver has stopped draining (interrupt).
+				select {
+				case out <- text + "." + domain:
+					permutationCount.Add(1)
+				case <-ctx.Done():
+					return ctx.Err()
+				}
 			}
 		}
 		return scanner.Err()
@@ -639,8 +645,12 @@ func (instance *Instance) ProcessSubdomainsStreaming(ctx context.Context, subdom
 			if subdomain == "" {
 				continue
 			}
-			out <- subdomain
-			subdomainCount.Add(1)
+			select {
+			case out <- subdomain:
+				subdomainCount.Add(1)
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
 		return scanner.Err()
 	})
