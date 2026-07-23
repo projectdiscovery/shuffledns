@@ -314,11 +314,15 @@ func (w *Writer) writeSimple(r resolve.Result) error {
 
 	if w.f.meta {
 		// resolver, unix timestamp and rcode prepended to the question
-		fmt.Fprintf(w.bw, "%s %d %s %s %s %s\n",
+		if _, err := fmt.Fprintf(w.bw, "%s %d %s %s %s %s\n",
 			emptyDash(r.Resolver), r.Timestamp.Unix(), rcodeString(r.Rcode),
-			qname, "IN", typeString(r.Type))
+			qname, "IN", typeString(r.Type)); err != nil {
+			return err
+		}
 	} else if w.f.question {
-		fmt.Fprintf(w.bw, "%s %s %s\n", qname, "IN", typeString(r.Type))
+		if _, err := fmt.Fprintf(w.bw, "%s %s %s\n", qname, "IN", typeString(r.Type)); err != nil {
+			return err
+		}
 	}
 
 	wrote := false
@@ -392,8 +396,10 @@ func (w *Writer) writeFull(r resolve.Result) error {
 		size = r.Msg.Len()
 		body = r.Msg.String()
 	}
-	fmt.Fprintf(w.bw, ";; Server: %s\n;; Size: %d\n;; Unix time: %d\n%s\n\n",
-		emptyDash(r.Resolver), size, r.Timestamp.Unix(), body)
+	if _, err := fmt.Fprintf(w.bw, ";; Server: %s\n;; Size: %d\n;; Unix time: %d\n%s\n\n",
+		emptyDash(r.Resolver), size, r.Timestamp.Unix(), body); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -407,14 +413,18 @@ func (w *Writer) writeList(r resolve.Result) error {
 	answers := w.answerRecords(r)
 	if len(answers) == 0 {
 		if w.f.listIncludeEmpty && r.Rcode == dns.RcodeSuccess {
-			fmt.Fprintf(w.bw, "%s\n", strings.TrimSuffix(qname, "."))
+			if _, err := fmt.Fprintf(w.bw, "%s\n", strings.TrimSuffix(qname, ".")); err != nil {
+				return err
+			}
 		}
 		return nil
 	}
 	for _, rr := range answers {
 		h := rr.Header()
-		fmt.Fprintf(w.bw, "%s\t%s\t%s\n",
-			strings.TrimSuffix(h.Name, "."), typeString(h.Rrtype), rdata(rr))
+		if _, err := fmt.Fprintf(w.bw, "%s\t%s\t%s\n",
+			strings.TrimSuffix(h.Name, "."), typeString(h.Rrtype), rdata(rr)); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -106,7 +106,7 @@ func main() {
 		os.Exit(1)
 	}
 	if !*keepFiles {
-		defer os.Remove(namesFile)
+		defer func() { _ = os.Remove(namesFile) }()
 	}
 
 	fmt.Printf("dnsbench: names=%d resolvers=%d hit=%d%% concurrency=%d retries=%d\n",
@@ -229,7 +229,7 @@ func runMassdns(sc scenario, namesFile string) (result, error) {
 		return result{}, err
 	}
 	if !*keepFiles {
-		defer os.Remove(resolversFile)
+		defer func() { _ = os.Remove(resolversFile) }()
 	}
 
 	timeout := perAttemptTimeout(sc.cfg)
@@ -305,7 +305,7 @@ func loadNames(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var names []string
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
@@ -322,7 +322,7 @@ func writeNamesFile(n int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	w := bufio.NewWriter(f)
 	for i := 0; i < n; i++ {
 		if _, err := fmt.Fprintf(w, "host%d.bench.example.com\n", i); err != nil {
@@ -337,7 +337,7 @@ func writeResolversFile(addrs []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	w := bufio.NewWriter(f)
 	for _, a := range addrs {
 		if _, err := fmt.Fprintln(w, a); err != nil {

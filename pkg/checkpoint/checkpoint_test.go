@@ -47,7 +47,7 @@ func TestResume(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c2.Close()
+	defer func() { _ = c2.Close() }()
 	if c2.Resumed() != 3 {
 		t.Fatalf("expected 3 resumed, got %d", c2.Resumed())
 	}
@@ -78,7 +78,7 @@ func TestCrashSafety(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c2.Close()
+	defer func() { _ = c2.Close() }()
 	if c2.Resumed() < flushEvery {
 		t.Fatalf("expected at least %d durable records, got %d", flushEvery, c2.Resumed())
 	}
@@ -90,7 +90,7 @@ func TestConcurrentDone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 	var wg sync.WaitGroup
 	for g := 0; g < 8; g++ {
 		wg.Add(1)

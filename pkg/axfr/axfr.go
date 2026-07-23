@@ -127,7 +127,7 @@ func transferFrom(ctx context.Context, apex, nsAddr string, cfg Config) (*Result
 				}
 			}()
 			if t.Conn != nil {
-				_ = t.Conn.Close()
+				_ = t.Close()
 			}
 		}
 		for env := range ch {

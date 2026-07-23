@@ -40,7 +40,7 @@ func main() {
 		if err != nil {
 			fatal("could not open error log: %v", err)
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		errOut = f
 	}
 
@@ -74,7 +74,7 @@ func main() {
 		if err != nil {
 			fatal("could not create output file: %v", err)
 		}
-		defer out.Close()
+		defer func() { _ = out.Close() }()
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -103,7 +103,7 @@ func main() {
 	if err != nil {
 		fatal("invalid output format: %v", err)
 	}
-	defer writer.Flush()
+	defer func() { _ = writer.Flush() }()
 
 	shardCfg, err := shard.Parse(cfg.shard)
 	if err != nil {
@@ -115,9 +115,9 @@ func main() {
 		if err != nil {
 			fatal("could not open resume checkpoint: %v", err)
 		}
-		defer ckpt.Close()
+		defer func() { _ = ckpt.Close() }()
 		if n := ckpt.Resumed(); n > 0 && !cfg.quiet {
-			fmt.Fprintf(errOut, "resuming: skipping %d already-completed names\n", n)
+			_, _ = fmt.Fprintf(errOut, "resuming: skipping %d already-completed names\n", n)
 		}
 	}
 	markDone := func(name string) {
@@ -129,14 +129,14 @@ func main() {
 	onResult := func(r resolve.Result) {
 		markDone(r.Name)
 		if err := writer.Write(r); err != nil {
-			fmt.Fprintf(errOut, "write error: %v\n", err)
+			_, _ = fmt.Fprintf(errOut, "write error: %v\n", err)
 		}
 	}
 	onError := func(name string, err error) {
 		markDone(name)
 		_ = writer.WriteFailure(name, qtype, "resolution failed")
 		if err != nil && !cfg.quiet {
-			fmt.Fprintf(errOut, "%s: %v\n", name, err)
+			_, _ = fmt.Fprintf(errOut, "%s: %v\n", name, err)
 		}
 	}
 
@@ -148,7 +148,7 @@ func main() {
 			defer close(raw)
 			if len(cfg.ptrTargets) > 0 {
 				if err := ptr.Stream(ctx, cfg.ptrTargets, raw); err != nil {
-					fmt.Fprintf(errOut, "ptr generation error: %v\n", err)
+					_, _ = fmt.Fprintf(errOut, "ptr generation error: %v\n", err)
 				}
 				return
 			}
@@ -247,11 +247,11 @@ func statusReporter(cfg config, errOut io.Writer) func(resolve.Stats) {
 	jsonMode := strings.EqualFold(cfg.statusFormat, "json")
 	return func(s resolve.Stats) {
 		if jsonMode {
-			fmt.Fprintf(errOut, `{"queries":%d,"retransmits":%d,"answered":%d,"inflight":%d,"concurrency":%d,"loss":%.4f,"rtt_ms":%.2f}`+"\n",
+			_, _ = fmt.Fprintf(errOut, `{"queries":%d,"retransmits":%d,"answered":%d,"inflight":%d,"concurrency":%d,"loss":%.4f,"rtt_ms":%.2f}`+"\n",
 				s.Queries, s.Retransmits, s.Answered, s.InflightDepth, s.ConcurrencyCap, s.LossRate, float64(s.RTT.Microseconds())/1000)
 			return
 		}
-		fmt.Fprintf(errOut, "\rprocessed: %d | answered: %d | inflight: %d | conc: %d | loss: %.1f%% | rtt: %s",
+		_, _ = fmt.Fprintf(errOut, "\rprocessed: %d | answered: %d | inflight: %d | conc: %d | loss: %.1f%% | rtt: %s",
 			s.Queries, s.Answered, s.InflightDepth, s.ConcurrencyCap, s.LossRate*100, s.RTT.Round(time.Microsecond))
 	}
 }
@@ -337,54 +337,54 @@ func runValidate(ctx context.Context, cfg config, resolvers []string, out *os.Fi
 		fatal("validation failed: %v", err)
 	}
 	w := bufio.NewWriter(out)
-	defer w.Flush()
+	defer func() { _ = w.Flush() }()
 	for _, r := range good {
-		fmt.Fprintln(w, r)
+		_, _ = fmt.Fprintln(w, r)
 	}
-	fmt.Fprintf(os.Stderr, "validated %d resolvers: %d good, %d rejected\n",
+	_, _ = fmt.Fprintf(os.Stderr, "validated %d resolvers: %d good, %d rejected\n",
 		len(report), len(good), len(report)-len(good))
 }
 
 func runAXFR(ctx context.Context, cfg config, resolvers []string, out *os.File, errOut io.Writer) {
 	w := bufio.NewWriter(out)
-	defer w.Flush()
+	defer func() { _ = w.Flush() }()
 	res, err := axfr.Attempt(ctx, axfr.Config{
 		Zone:      cfg.axfr,
 		Resolvers: resolvers,
 		Timeout:   cfg.timeout,
-		OnName:    func(name string) { fmt.Fprintln(w, name) },
+		OnName:    func(name string) { _, _ = fmt.Fprintln(w, name) },
 		OnNameserver: func(ns string, names int, err error) {
 			if err != nil {
-				fmt.Fprintf(errOut, "axfr %s: refused/failed (%v)\n", ns, err)
+				_, _ = fmt.Fprintf(errOut, "axfr %s: refused/failed (%v)\n", ns, err)
 			} else {
-				fmt.Fprintf(errOut, "axfr %s: transferred %d names\n", ns, names)
+				_, _ = fmt.Fprintf(errOut, "axfr %s: transferred %d names\n", ns, names)
 			}
 		},
 	})
 	if err != nil {
 		fatal("zone transfer failed: %v", err)
 	}
-	fmt.Fprintf(errOut, "AXFR of %s via %s transferred %d names (%d records)\n",
+	_, _ = fmt.Fprintf(errOut, "AXFR of %s via %s transferred %d names (%d records)\n",
 		cfg.axfr, res.Nameserver, len(res.Names), res.Records)
 }
 
 func runZonewalk(ctx context.Context, cfg config, resolvers []string, out *os.File, errOut io.Writer) {
 	w := bufio.NewWriter(out)
-	defer w.Flush()
+	defer func() { _ = w.Flush() }()
 	res, err := zonewalk.Walk(ctx, zonewalk.Config{
 		Zone:      cfg.zone,
 		Resolvers: resolvers,
 		Timeout:   cfg.timeout,
-		OnName:    func(name string) { fmt.Fprintln(w, name) },
+		OnName:    func(name string) { _, _ = fmt.Fprintln(w, name) },
 	})
 	if err != nil {
 		fatal("zone walk failed: %v", err)
 	}
 	if res.NSEC3 {
-		fmt.Fprintf(errOut, "zone %s is NSEC3-signed (salt=%s iterations=%d)\n",
+		_, _ = fmt.Fprintf(errOut, "zone %s is NSEC3-signed (salt=%s iterations=%d)\n",
 			cfg.zone, res.NSEC3Param.Salt, res.NSEC3Param.Iterations)
 		if cfg.nsec3Dict == "" {
-			fmt.Fprintf(errOut, "supply --nsec3-dict <wordlist> to harvest and crack the NSEC3 ring\n")
+			_, _ = fmt.Fprintf(errOut, "supply --nsec3-dict <wordlist> to harvest and crack the NSEC3 ring\n")
 			return
 		}
 		candidates, rerr := readLines(cfg.nsec3Dict)
@@ -396,16 +396,16 @@ func runZonewalk(ctx context.Context, cfg config, resolvers []string, out *os.Fi
 			Resolvers:  resolvers,
 			Timeout:    cfg.timeout,
 			Candidates: candidates,
-			OnName:     func(name string) { fmt.Fprintln(w, name) },
+			OnName:     func(name string) { _, _ = fmt.Fprintln(w, name) },
 		})
 		if cerr != nil {
 			fatal("nsec3 crack failed: %v", cerr)
 		}
-		fmt.Fprintf(errOut, "NSEC3 crack of %s: harvested %d hashes, recovered %d/%d names (saturated=%t)\n",
+		_, _ = fmt.Fprintf(errOut, "NSEC3 crack of %s: harvested %d hashes, recovered %d/%d names (saturated=%t)\n",
 			cfg.zone, cres.HarvestedHashes, len(cres.Names), len(candidates), cres.Saturated)
 		return
 	}
-	fmt.Fprintf(errOut, "zone walk of %s discovered %d names\n", cfg.zone, len(res.Names))
+	_, _ = fmt.Fprintf(errOut, "zone walk of %s discovered %d names\n", cfg.zone, len(res.Names))
 }
 
 func produceNames(ctx context.Context, files []string, out chan<- string, errOut io.Writer) {
@@ -429,7 +429,7 @@ func produceNames(ctx context.Context, files []string, out chan<- string, errOut
 	for _, fname := range files {
 		f, err := os.Open(fname)
 		if err != nil {
-			fmt.Fprintf(errOut, "could not open %s: %v\n", fname, err)
+			_, _ = fmt.Fprintf(errOut, "could not open %s: %v\n", fname, err)
 			continue
 		}
 		cont := scanLines(f, emit)
@@ -456,7 +456,7 @@ func readLines(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var lines []string
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
@@ -480,6 +480,6 @@ func parseBatchMode(s string) resolve.BatchMode {
 }
 
 func fatal(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
+	_, _ = fmt.Fprintf(os.Stderr, format+"\n", args...)
 	os.Exit(1)
 }

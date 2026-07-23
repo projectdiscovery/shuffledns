@@ -103,7 +103,7 @@ func (u *udpExchanger) exchangeTCP(ctx context.Context, server netip.AddrPort, m
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	co := &dns.Conn{Conn: conn}
 	if dl, ok := ctx.Deadline(); ok {
 		_ = conn.SetDeadline(dl)

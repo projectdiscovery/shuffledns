@@ -30,17 +30,6 @@ func (d *delegation) expired(now time.Time) bool {
 	return !d.expiry.IsZero() && now.After(d.expiry)
 }
 
-// hasGlue reports whether at least one nameserver carries an address, so the
-// delegation is immediately usable without a separate glue lookup.
-func (d *delegation) hasGlue() bool {
-	for _, ns := range d.ns {
-		if len(ns.addrs) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 // cache is a bounded, TTL-aware store of delegations keyed by canonical zone.
 // It is safe for concurrent use (the underlying LRU is locked) and shared by
 // every worker so that common ancestors (root, TLDs, popular zones) are walked

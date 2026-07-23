@@ -67,9 +67,10 @@ func TestResolveBasic(t *testing.T) {
 		OnResult: func(r Result) {
 			mu.Lock()
 			defer mu.Unlock()
-			if r.Rcode == dns.RcodeSuccess {
+			switch r.Rcode {
+			case dns.RcodeSuccess:
 				got[r.Name] = r.A
-			} else if r.Rcode == dns.RcodeNameError {
+			case dns.RcodeNameError:
 				nx[r.Name] = struct{}{}
 			}
 		},
