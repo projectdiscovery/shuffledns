@@ -128,8 +128,8 @@ github.com/projectdiscovery/dnsx v1.3.0 h1:NO57HD0arskX9s4MSivJDX/AX8HungbIxhCIk
 github.com/projectdiscovery/dnsx v1.3.0/go.mod h1:IC75A+ffGpGPnjvEbFl+QfARQec6Ov+DFN3VTn5pEzY=
 github.com/projectdiscovery/goflags v0.1.75 h1:njEBnyueQaFa2ptWxbyl9zX0OClNdlN2AzZveNHiBOs=
 github.com/projectdiscovery/goflags v0.1.75/go.mod h1:7nAP1r2Dqgn/rwmOE3EWbZWUCEJKNIhVSBGpuzJAIns=
-github.com/projectdiscovery/gologger v1.1.71 h1:IYU4mw9viKdSzMTIGVpYuw1Gtg7QIHIStqAQgeNXcBQ=
-github.com/projectdiscovery/gologger v1.1.71/go.mod h1:mJwODZcFDg70ihINpOvZevmBtgvpP8H9/l8Y+OPhZPY=
+github.com/projectdiscovery/gologger v1.1.72 h1:PKk+aSx3jYOCBPi+FD+nTnhe+Vxx9u3K7Ega0GVlMCI=
+github.com/projectdiscovery/gologger v1.1.72/go.mod h1:mJwODZcFDg70ihINpOvZevmBtgvpP8H9/l8Y+OPhZPY=
 github.com/projectdiscovery/machineid v0.0.0-20250715113114-c77eb3567582 h1:eR+0HE//Ciyfwy3HC7fjRyKShSJHYoX2Pv7pPshjK/Q=
 github.com/projectdiscovery/machineid v0.0.0-20250715113114-c77eb3567582/go.mod h1:3G3BRKui7nMuDFAZKR/M2hiOLtaOmyukT20g88qRQjI=
 github.com/projectdiscovery/retryabledns v1.0.115 h1:RKV63FNIznFHUoawg/1hs53pVH3wqPtFhwstCuxVSoA=
