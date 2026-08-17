@@ -126,8 +126,8 @@ github.com/projectdiscovery/cdncheck v1.2.48 h1:b9QiY8OCz5u9cwNm94FgoQbc3u4Et+I+
 github.com/projectdiscovery/cdncheck v1.2.48/go.mod h1:9oE9KKxCSHNvUf0UaMeqqUwWpC38FkNaTll0ScIBT3w=
 github.com/projectdiscovery/dnsx v1.3.0 h1:NO57HD0arskX9s4MSivJDX/AX8HungbIxhCIkd8Vy10=
 github.com/projectdiscovery/dnsx v1.3.0/go.mod h1:IC75A+ffGpGPnjvEbFl+QfARQec6Ov+DFN3VTn5pEzY=
-github.com/projectdiscovery/goflags v0.1.75 h1:njEBnyueQaFa2ptWxbyl9zX0OClNdlN2AzZveNHiBOs=
-github.com/projectdiscovery/goflags v0.1.75/go.mod h1:7nAP1r2Dqgn/rwmOE3EWbZWUCEJKNIhVSBGpuzJAIns=
+github.com/projectdiscovery/goflags v0.1.76 h1:4OnNU4hvzVdOc+7wcIYBnPOHzo0BcTJ5lC6hS/TeUkA=
+github.com/projectdiscovery/goflags v0.1.76/go.mod h1:7nAP1r2Dqgn/rwmOE3EWbZWUCEJKNIhVSBGpuzJAIns=
 github.com/projectdiscovery/gologger v1.1.72 h1:PKk+aSx3jYOCBPi+FD+nTnhe+Vxx9u3K7Ega0GVlMCI=
 github.com/projectdiscovery/gologger v1.1.72/go.mod h1:mJwODZcFDg70ihINpOvZevmBtgvpP8H9/l8Y+OPhZPY=
 github.com/projectdiscovery/machineid v0.0.0-20250715113114-c77eb3567582 h1:eR+0HE//Ciyfwy3HC7fjRyKShSJHYoX2Pv7pPshjK/Q=
