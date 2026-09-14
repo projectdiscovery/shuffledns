@@ -17,18 +17,19 @@ func (options *Options) validateOptions() error {
 		return errors.New("both verbose and silent mode specified")
 	}
 
-	// Check if a list of resolvers was provided and it exists
-	if !fileutil.FileExists(options.ResolversFile) {
-		return errors.New("resolver file doesn't exists")
-	}
-
-	// Check if resolvers are blank
-	if blank, err := fileutil.IsEmpty(options.ResolversFile); err == nil {
-		if blank {
-			return errors.New("empty resolver list specified")
+	// Iterative mode recurses from the root servers and needs no resolver list.
+	// For the stub-resolver path, a non-empty resolver file is required.
+	if !options.Iterative {
+		if !fileutil.FileExists(options.ResolversFile) {
+			return errors.New("resolver file doesn't exists")
 		}
-	} else {
-		return fmt.Errorf("could not read resolvers: %w", err)
+		if blank, err := fileutil.IsEmpty(options.ResolversFile); err == nil {
+			if blank {
+				return errors.New("empty resolver list specified")
+			}
+		} else {
+			return fmt.Errorf("could not read resolvers: %w", err)
+		}
 	}
 
 	switch options.Mode {

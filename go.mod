@@ -3,6 +3,7 @@ module github.com/projectdiscovery/shuffledns
 go 1.25.0
 
 require (
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/miekg/dns v1.1.72
 	github.com/projectdiscovery/dnsx v1.3.1
 	github.com/projectdiscovery/goflags v0.2.1
@@ -11,7 +12,6 @@ require (
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.5.0
 	github.com/stretchr/testify v1.12.1
-	github.com/syndtr/goleveldb v1.0.0
 	github.com/weppos/publicsuffix-go v0.50.3-0.20260104170930-90713dec78f2
 )
 
@@ -28,8 +28,8 @@ require (
 	github.com/projectdiscovery/utils v0.11.3
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	golang.org/x/mod v0.35.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/net v0.55.0
+	golang.org/x/sys v0.45.0
 	golang.org/x/tools v0.44.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
@@ -50,7 +50,6 @@ require (
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/gaissmai/bart v0.29.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-github/v30 v30.1.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
@@ -88,5 +87,4 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
-	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
