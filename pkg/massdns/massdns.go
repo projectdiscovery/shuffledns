@@ -20,38 +20,50 @@ type Options struct {
 	Domains []string
 	// Retries is the number of retries for dns
 	Retries int
-	// MassdnsPath is the path to the binary
-	MassdnsPath string
-	// Threads is the hashmap size for massdns
+	// Threads is the number of concurrent in-flight dns queries
 	Threads int
-	// InputFile is the file to use for massdns input
-	InputFile string
 	// ResolversFile is the file with the resolvers
 	ResolversFile string
 	// TrustedResolvers is the file with the trusted resolvers
 	TrustedResolvers string
-	// TempDir is a temporary directory for storing massdns misc files
+	// TempDir is a temporary directory for storing misc files
 	TempDir string
-	// OutputFile is the file to use for massdns output
+	// OutputFile is the file to write results to
 	OutputFile string
 	// Json is format ouput to ndjson format
 	Json bool
 	// WildcardsThreads is the number of wildcards concurrent threads
 	WildcardsThreads int
-	// MassdnsRaw perform wildcards filtering from an existing massdns output file
+	// MassdnsRaw performs wildcards filtering from an existing massdns output file
 	MassdnsRaw string
 	// StrictWildcard controls whether the wildcard check should be performed on each result
 	StrictWildcard bool
 	// WildcardOutputFile is the file where the list of wildcards is dumped
 	WildcardOutputFile string
-	// MassDnsCmd supports massdns flags
-	MassDnsCmd string
-	// KeepStderr controls whether to capture and store massdns stderr output
-	KeepStderr bool
-	// BatchSize controls the number of lines per chunk for incremental processing
-	BatchSize int
 	// FilterInternalIPs controls whether to filter out internal/private IP addresses
 	FilterInternalIPs bool
+
+	// Native resolver tuning (forwarded to pkg/resolve).
+	QueryType           string // DNS record type to resolve (A, AAAA, ...). Default A.
+	BatchMode           string // sendmmsg/recvmmsg batching: off | on | adaptive
+	SocketCount         int    // UDP sockets per run (0 = scale to cores)
+	UDPSize             int    // EDNS0 advertised UDP payload size (0 = default; <512 disables)
+	QPS                 int    // outbound query rate limit (0 = unlimited)
+	NoRecurse           bool   // send non-recursive queries (RD=0)
+	Sticky              bool   // do not rotate resolver on retry
+	ResolverHealth      bool   // per-resolver health scoring / de-weighting
+	AdaptiveConcurrency bool   // shrink/grow in-flight cap based on packet loss
+	CrossCheck          bool   // re-verify positive answers on a second resolver
+	ExtendedInput       bool   // parse "name [resolver ...]" input lines
+	NoVerifyIP          bool   // disable reply source-IP verification
+	NoTCPFallback       bool   // disable TCP fallback on truncated answers
+	// Iterative resolves from the root servers directly (no recursive resolver
+	// list needed), caching delegations. Removes the public-resolver dependency.
+	Iterative bool
+
+	// Distributed resolution and resume.
+	Shard      string // "m/n": process only shard m of n
+	ResumeFile string // checkpoint file for crash-safe stop/resume
 
 	OnResult func(*retryabledns.DNSData)
 }
