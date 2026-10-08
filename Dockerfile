@@ -1,8 +1,11 @@
-FROM golang:1.27-alpine AS build-env
-RUN apk --no-cache add git
-RUN go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
+FROM alpine:latest
 
-FROM alpine:3.24.2
+LABEL org.opencontainers.image.authors="ProjectDiscovery"
+LABEL org.opencontainers.image.description="shuffleDNS is a wrapper around massdns written in go that allows you to enumerate valid subdomains using active bruteforce as well as resolve subdomains with wildcard handling and easy input-output support."
+LABEL org.opencontainers.image.licenses="GPL-3.0-only"
+LABEL org.opencontainers.image.title="shuffledns"
+LABEL org.opencontainers.image.url="https://github.com/projectdiscovery/shuffledns"
+
 RUN apk --update --no-cache add ldns \
   && apk --no-cache --virtual .deps add ldns-dev \
                                         git \
@@ -16,6 +19,7 @@ RUN apk --update --no-cache add ldns \
   && rm -rf /massdns \
   && apk del .deps
 
-COPY --from=build-env /go/bin/shuffledns /usr/bin/shuffledns
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/shuffledns /usr/bin/shuffledns
 ENV HOME=/
 ENTRYPOINT ["/usr/bin/shuffledns"]
