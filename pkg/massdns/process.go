@@ -52,8 +52,10 @@ func (instance *Instance) RunWithContext(ctx context.Context) (stdout, stderr st
 		}()
 	}
 
-	// Run the command on a temp file and wait for the output
-	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", instance.options.InputFile, "-s", strconv.Itoa(instance.options.Threads)}
+	// Run the command on a temp file and wait for the output. The `r` output flag asks
+	// massdns to prepend each reply block with a metadata line containing the resolver
+	// IP, Unix timestamp and rcode so we can attribute answers back to a resolver.
+	args := []string{"-r", instance.options.ResolversFile, "-o", "Snlr", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", instance.options.InputFile, "-s", strconv.Itoa(instance.options.Threads)}
 	if instance.options.MassDnsCmd != "" {
 		args = append(args, strings.Fields(instance.options.MassDnsCmd)...)
 	}
@@ -177,8 +179,9 @@ func (instance *Instance) runChunk(ctx context.Context, chunkFile string) (stdou
 		}()
 	}
 
-	// Run the command on the chunk file
-	args := []string{"-r", instance.options.ResolversFile, "-o", "Snl", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", chunkFile, "-s", strconv.Itoa(instance.options.Threads)}
+	// Run the command on the chunk file. The `r` output flag asks massdns to prepend
+	// each reply block with the resolver IP so we can attribute answers per-resolver.
+	args := []string{"-r", instance.options.ResolversFile, "-o", "Snlr", "--retry", "REFUSED", "--retry", "SERVFAIL", "-t", "A", chunkFile, "-s", strconv.Itoa(instance.options.Threads)}
 	if instance.options.MassDnsCmd != "" {
 		args = append(args, strings.Fields(instance.options.MassDnsCmd)...)
 	}
@@ -206,8 +209,9 @@ func (instance *Instance) runChunk(ctx context.Context, chunkFile string) (stdou
 }
 
 type item struct {
-	ip     string
-	domain string
+	ip       string
+	domain   string
+	resolver string
 }
 
 func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.Store) error {
@@ -223,12 +227,30 @@ func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.St
 		batcher.WithFlushInterval[item](10*time.Second),
 		batcher.WithFlushCallback[item](func(items []item) {
 			ipMap := make(map[string][]string)
+			// Aggregate resolvers per hostname so we issue a single
+			// store update per hostname instead of one per record.
+			resolverMap := make(map[string]map[string]struct{})
 			for _, item := range items {
 				ipMap[item.ip] = append(ipMap[item.ip], item.domain)
+				if item.resolver != "" {
+					if _, ok := resolverMap[item.domain]; !ok {
+						resolverMap[item.domain] = make(map[string]struct{})
+					}
+					resolverMap[item.domain][item.resolver] = struct{}{}
+				}
 			}
 			for ip, domains := range ipMap {
 				if err := flushToDisk(ip, domains); err != nil {
 					gologger.Fatal().Msgf("could not update record: %s", err)
+				}
+			}
+			for domain, resolvers := range resolverMap {
+				resolverList := make([]string, 0, len(resolvers))
+				for r := range resolvers {
+					resolverList = append(resolverList, r)
+				}
+				if err := store.AppendResolvers(domain, resolverList...); err != nil {
+					gologger.Error().Msgf("could not update resolver record: %s", err)
 				}
 			}
 		}),
@@ -236,13 +258,13 @@ func (instance *Instance) parseMassDNSOutputFile(tmpFile string, store *store.St
 
 	bulkWriter.Run()
 
-	err := parser.ParseFile(tmpFile, func(domain string, ips []string) error {
+	err := parser.ParseFile(tmpFile, func(domain string, ips []string, resolver string) error {
 		for _, ip := range ips {
 			// Filter out 0.0.0.0 always, and internal IPs if flag is set
 			if instance.shouldFilterIP(ip) {
 				continue
 			}
-			bulkWriter.Append(item{ip: ip, domain: domain})
+			bulkWriter.Append(item{ip: ip, domain: domain, resolver: resolver})
 		}
 		return nil
 	})
@@ -435,7 +457,11 @@ func (instance *Instance) writeOutput(store *store.Store) error {
 				var buffer strings.Builder
 
 				if instance.options.Json {
-					hostnameJson, err := json.Marshal(map[string]interface{}{"hostname": hostname})
+					payload := map[string]interface{}{"hostname": hostname}
+					if resolvers := store.GetResolvers(hostname); len(resolvers) > 0 {
+						payload["resolvers"] = resolvers
+					}
+					hostnameJson, err := json.Marshal(payload)
 					if err != nil {
 						gologger.Error().Msgf("could not marshal output as json: %v", err)
 					}
