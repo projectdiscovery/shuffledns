@@ -12,10 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version: 1.26.x
-
       - name: Test
         run: go test ./...
 
@@ -28,6 +24,9 @@ jobs:
         with:
           repository: blechschmidt/massdns
           path: ./massdns
+
+      - name: Set up Go
+        uses: projectdiscovery/actions/setup/go@v1
 
       - name: Install massdns
         working-directory: ./massdns
