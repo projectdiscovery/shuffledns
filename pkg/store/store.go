@@ -12,6 +12,11 @@ import (
 
 const Megabyte = 1 << 20
 
+// resolverPrefix namespaces resolver-tracking entries inside the
+// leveldb store so they don't collide with the IP -> hostnames
+// records used for wildcard removal.
+const resolverPrefix = "r:"
+
 // Store is a storage for ip based wildcard removal
 type Store struct {
 	DB *leveldb.DB
@@ -110,7 +115,11 @@ func (s *Store) Iterate(f func(ip string, hostnames []string, counter int)) {
 	defer iter.Release()
 
 	for iter.Next() {
-		ip := string(iter.Key())
+		key := string(iter.Key())
+		// Skip resolver-tracking entries; only iterate IP -> hostnames records.
+		if strings.HasPrefix(key, resolverPrefix) {
+			continue
+		}
 
 		var hostnameMap map[string]struct{}
 		if err := json.Unmarshal(iter.Value(), &hostnameMap); err != nil {
@@ -124,6 +133,64 @@ func (s *Store) Iterate(f func(ip string, hostnames []string, counter int)) {
 		}
 
 		counter := len(hostnames)
-		f(ip, hostnames, counter)
+		f(key, hostnames, counter)
 	}
+}
+
+// AppendResolvers records the resolver(s) that were observed answering
+// for the given hostname. Empty resolver entries are ignored so the
+// store stays consistent when massdns output lacks the metadata line.
+func (s *Store) AppendResolvers(hostname string, resolvers ...string) error {
+	filtered := resolvers[:0]
+	for _, r := range resolvers {
+		if r != "" {
+			filtered = append(filtered, r)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	key := []byte(resolverPrefix + hostname)
+	var resolverMap map[string]struct{}
+	existing, err := s.DB.Get(key, nil)
+	if err == nil && len(existing) > 0 {
+		if err := json.Unmarshal(existing, &resolverMap); err != nil {
+			resolverMap = make(map[string]struct{})
+		}
+	} else {
+		resolverMap = make(map[string]struct{})
+	}
+
+	for _, r := range filtered {
+		resolverMap[r] = struct{}{}
+	}
+
+	data, err := json.Marshal(resolverMap)
+	if err != nil {
+		return err
+	}
+	return s.DB.Put(key, data, nil)
+}
+
+// GetResolvers returns the deduplicated list of resolver IPs that
+// produced answers for the given hostname. The returned slice is
+// nil when no resolvers were recorded for the hostname.
+func (s *Store) GetResolvers(hostname string) []string {
+	data, err := s.DB.Get([]byte(resolverPrefix+hostname), nil)
+	if err != nil || len(data) == 0 {
+		return nil
+	}
+	var resolverMap map[string]struct{}
+	if err := json.Unmarshal(data, &resolverMap); err != nil {
+		return nil
+	}
+	if len(resolverMap) == 0 {
+		return nil
+	}
+	resolvers := make([]string, 0, len(resolverMap))
+	for r := range resolverMap {
+		resolvers = append(resolvers, r)
+	}
+	return resolvers
 }
