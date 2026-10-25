@@ -2,7 +2,9 @@ package wildcards
 
 import (
 	"bufio"
+	"net"
 	"os"
+	"strings"
 )
 
 func LoadResolversFromFile(file string) ([]string, error) {
@@ -17,11 +19,16 @@ func LoadResolversFromFile(file string) ([]string, error) {
 	var servers []string
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		text := scanner.Text()
+		text := strings.TrimSpace(scanner.Text())
 		if text == "" {
 			continue
 		}
-		servers = append(servers, text+":53")
+		// keep an explicit port, default to 53 otherwise (IPv6 safe)
+		if _, _, err := net.SplitHostPort(text); err == nil {
+			servers = append(servers, text)
+			continue
+		}
+		servers = append(servers, net.JoinHostPort(strings.Trim(text, "[]"), "53"))
 	}
 	return servers, nil
 }
