@@ -45,7 +45,7 @@ Inspired by [massdns](https://github.com/blechschmidt/massdns) by [@blechschmidt
 
 # Installation
 
-`go1.24+` required:
+`go1.26.10+` required:
 
 ```bash
 go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
