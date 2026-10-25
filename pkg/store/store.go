@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"os"
+	"sort"
 	"strings"
 
 	mapsutil "github.com/projectdiscovery/utils/maps"
@@ -174,8 +175,8 @@ func (s *Store) AppendResolvers(hostname string, resolvers ...string) error {
 }
 
 // GetResolvers returns the deduplicated list of resolver IPs that
-// produced answers for the given hostname. The returned slice is
-// nil when no resolvers were recorded for the hostname.
+// produced answers for the given hostname, sorted for stable output.
+// The returned slice is nil when no resolvers were recorded for the hostname.
 func (s *Store) GetResolvers(hostname string) []string {
 	data, err := s.DB.Get([]byte(resolverPrefix+hostname), nil)
 	if err != nil || len(data) == 0 {
@@ -192,5 +193,6 @@ func (s *Store) GetResolvers(hostname string) []string {
 	for r := range resolverMap {
 		resolvers = append(resolvers, r)
 	}
+	sort.Strings(resolvers)
 	return resolvers
 }
