@@ -12,14 +12,12 @@ jobs:
     runs-on: ubuntu-latest-16-cores
     steps:
       - name: "Check out code"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with: 
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: 1.24.x
+        uses: projectdiscovery/actions/setup/go@v1
       
       - name: release test
         uses: goreleaser/goreleaser-action@v7
