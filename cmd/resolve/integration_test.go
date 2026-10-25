@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -114,7 +115,7 @@ func TestCLIAgainstBattery(t *testing.T) {
 	cmd.Stdin = strings.NewReader(names.String())
 	out, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("resolve binary failed: %v", err)
+		t.Fatalf("resolve binary failed: %v\n%s", err, stderrOf(err))
 	}
 	if !strings.Contains(string(out), " A 10.") {
 		t.Fatalf("expected A-record output, got:\n%s", out)
@@ -129,6 +130,15 @@ func buildResolve(t *testing.T) string {
 		t.Fatalf("build failed: %v\n%s", err, out)
 	}
 	return bin
+}
+
+// stderrOf returns the captured stderr of a failed exec.Cmd.Output call.
+func stderrOf(err error) []byte {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return exitErr.Stderr
+	}
+	return nil
 }
 
 func writeResolversFile(t *testing.T, addrs []string) string {
@@ -182,7 +192,7 @@ func TestShardingPartitionsWork(t *testing.T) {
 		cmd.Stdin = strings.NewReader(names)
 		out, err := cmd.Output()
 		if err != nil {
-			t.Fatalf("shard %s failed: %v", shard, err)
+			t.Fatalf("shard %s failed: %v\n%s", shard, err, stderrOf(err))
 		}
 		return resolvedNames(string(out))
 	}
@@ -227,7 +237,7 @@ func TestResumeSkipsCompleted(t *testing.T) {
 		cmd.Stdin = strings.NewReader(names)
 		out, err := cmd.Output()
 		if err != nil {
-			t.Fatalf("run failed: %v", err)
+			t.Fatalf("run failed: %v\n%s", err, stderrOf(err))
 		}
 		return string(out)
 	}

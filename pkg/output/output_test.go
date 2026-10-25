@@ -87,7 +87,7 @@ func TestSimpleSnlRoundTripsThroughParser(t *testing.T) {
 
 func TestSimpleTTLClass(t *testing.T) {
 	got := render(t, "St", sampleResult())
-	want := "example.com. 45929 IN A 93.184.216.34\n"
+	want := "example.com. IN 45929 A 93.184.216.34\n"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}
@@ -95,7 +95,7 @@ func TestSimpleTTLClass(t *testing.T) {
 
 func TestSimpleQuestionAndAuthority(t *testing.T) {
 	got := render(t, "Snuq", sampleResult())
-	if !strings.Contains(got, "example.com. IN A\n") {
+	if !strings.Contains(got, "example.com.  A\n") {
 		t.Fatalf("missing question line: %q", got)
 	}
 	if !strings.Contains(got, "example.com. A 93.184.216.34\n") {
@@ -108,7 +108,14 @@ func TestSimpleQuestionAndAuthority(t *testing.T) {
 
 func TestSimpleMeta(t *testing.T) {
 	got := render(t, "Snr", sampleResult())
-	if !strings.HasPrefix(got, "192.0.2.1:53 1513458347 NOERROR example.com. IN A\n") {
+	if !strings.HasPrefix(got, "192.0.2.1:53 1513458347 NOERROR example.com.  A\n") {
+		t.Fatalf("meta prefix wrong: %q", got)
+	}
+}
+
+func TestSimpleMetaTTLClass(t *testing.T) {
+	got := render(t, "Snrt", sampleResult())
+	if !strings.HasPrefix(got, "192.0.2.1:53 1513458347 NOERROR example.com. IN A\nexample.com. IN 45929 A 93.184.216.34\n") {
 		t.Fatalf("meta prefix wrong: %q", got)
 	}
 }

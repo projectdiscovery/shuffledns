@@ -297,8 +297,8 @@ type batchConn interface {
 // socket is a UDP socket plus its in-flight table.
 type socket struct {
 	conn     *net.UDPConn
-	rawFD    int  // >=0: Linux SOCK_RAW IPv6 for --rand-src-ipv6; conn is nil
-	family   int  // 4, 6, or 0 (dual-stack)
+	rawFD    int       // >=0: Linux SOCK_RAW IPv6 for --rand-src-ipv6; conn is nil
+	family   int       // 4, 6, or 0 (dual-stack)
 	pc       batchConn // batch (sendmmsg/recvmmsg) wrapper; nil if batching unavailable
 	mu       sync.Mutex
 	inflight map[uint16]*query
@@ -310,6 +310,7 @@ type Client struct {
 	resolvers     []string
 	resolverAddrs []*net.UDPAddr // pre-resolved, shared read-only across goroutines
 	sockets       []*socket
+	closeOnce     sync.Once     // sockets are closed once; fields stay intact for reader goroutines
 	sem           chan struct{} // static in-flight cap (fast path)
 	dynSem        *adaptiveSem  // adjustable in-flight cap (AdaptiveConcurrency); nil otherwise
 	limiter       *limiter
@@ -676,20 +677,23 @@ func (c *Client) Close() {
 	c.closeSockets()
 }
 
+// closeSockets closes every socket exactly once. It does not reset the socket
+// fields: reader goroutines may still read them and must see a closed socket
+// (and fail the read) rather than a nil conn.
 func (c *Client) closeSockets() {
-	for _, s := range c.sockets {
-		if s == nil {
-			continue
+	c.closeOnce.Do(func() {
+		for _, s := range c.sockets {
+			if s == nil {
+				continue
+			}
+			if s.conn != nil {
+				_ = s.conn.Close()
+			}
+			if s.rawFD >= 0 {
+				closeRawFD(s.rawFD)
+			}
 		}
-		if s.conn != nil {
-			_ = s.conn.Close()
-			s.conn = nil
-		}
-		if s.rawFD >= 0 {
-			closeRawFD(s.rawFD)
-			s.rawFD = -1
-		}
-	}
+	})
 }
 
 // pickSocket selects a UDP/raw socket that can reach addr's address family.

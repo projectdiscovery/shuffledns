@@ -312,15 +312,21 @@ func (w *Writer) WriteFailure(name string, qtype uint16, reason string) error {
 func (w *Writer) writeSimple(r resolve.Result) error {
 	qname := questionName(r)
 
+	// massdns prints the question class only with the t flag and leaves the
+	// field empty otherwise ("example.com.  A").
+	qclass := ""
+	if w.f.ttlClass {
+		qclass = "IN"
+	}
 	if w.f.meta {
 		// resolver, unix timestamp and rcode prepended to the question
 		if _, err := fmt.Fprintf(w.bw, "%s %d %s %s %s %s\n",
 			emptyDash(r.Resolver), r.Timestamp.Unix(), rcodeString(r.Rcode),
-			qname, "IN", typeString(r.Type)); err != nil {
+			qname, qclass, typeString(r.Type)); err != nil {
 			return err
 		}
 	} else if w.f.question {
-		if _, err := fmt.Fprintf(w.bw, "%s %s %s\n", qname, "IN", typeString(r.Type)); err != nil {
+		if _, err := fmt.Fprintf(w.bw, "%s %s %s\n", qname, qclass, typeString(r.Type)); err != nil {
 			return err
 		}
 	}
@@ -382,7 +388,8 @@ func (w *Writer) simpleLine(rr dns.RR) string {
 	h := rr.Header()
 	data := rdata(rr)
 	if w.f.ttlClass {
-		return fmt.Sprintf("%s %d %s %s %s\n", h.Name, h.Ttl, classString(h.Class), typeString(h.Rrtype), data)
+		// massdns order: name class ttl type data
+		return fmt.Sprintf("%s %s %d %s %s\n", h.Name, classString(h.Class), h.Ttl, typeString(h.Rrtype), data)
 	}
 	return fmt.Sprintf("%s %s %s\n", h.Name, typeString(h.Rrtype), data)
 }

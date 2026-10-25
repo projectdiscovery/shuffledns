@@ -19,19 +19,19 @@ import (
 // offsets so files are interchangeable with Linux massdns when written there.
 
 const (
-	binaryVersion       = uint32(0)
-	binarySockaddrSize  = 128
-	binaryFamilyOffset  = 0
-	binaryFamilySize    = 2
-	binaryPortSize      = 2
-	binaryTimeSize      = 8
-	binarySizeTSize     = 8
-	binaryAFInet        = uint16(2)  // AF_INET on Linux
-	binaryAFInet6       = uint16(10) // AF_INET6 on Linux
-	binarySinAddrOff    = 4
-	binarySinPortOff    = 2
-	binarySin6AddrOff   = 8
-	binarySin6PortOff   = 2
+	binaryVersion      = uint32(0)
+	binarySockaddrSize = 128
+	binaryFamilyOffset = 0
+	binaryFamilySize   = 2
+	binaryPortSize     = 2
+	binaryTimeSize     = 8
+	binarySizeTSize    = 8
+	binaryAFInet       = uint16(2)  // AF_INET on Linux
+	binaryAFInet6      = uint16(10) // AF_INET6 on Linux
+	binarySinAddrOff   = 4
+	binarySinPortOff   = 2
+	binarySin6AddrOff  = 8
+	binarySin6PortOff  = 2
 )
 
 func writeBinaryHeader(w io.Writer) error {
