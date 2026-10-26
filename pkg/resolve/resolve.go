@@ -46,6 +46,7 @@ type Result struct {
 	TXT      []string // TXT strings
 	SOA      []string // SOA primary nameservers
 	Resolver string   // resolver that answered
+	TCP      bool     // answer came over TCP (truncation fallback)
 
 	// Msg is the full parsed response message (all sections, TTLs, classes).
 	// It is retained so callers (e.g. the output formatter) can render the
@@ -526,13 +527,19 @@ func New(opts Options) (*Client, error) {
 		return c, nil
 	}
 
+	// A single-family resolver set gets single-family sockets. On macOS/BSD a
+	// dual-stack [::] socket can be given a port that another process holds
+	// with an IPv4 socket, and that socket then receives every IPv4 reply.
+	// Extended input may name resolvers of the other family, so it keeps
+	// dual-stack sockets unless batching already requires one family.
 	network := "udp"
 	family := 0
+	singleFamily := c.batchCapable || !c.extInput
 	switch {
-	case c.batchCapable && allIPv4:
+	case singleFamily && allIPv4:
 		network = "udp4"
 		family = 4
-	case c.batchCapable && allIPv6:
+	case singleFamily && allIPv6:
 		network = "udp6"
 		family = 6
 	}
@@ -749,10 +756,15 @@ func (c *Client) pickResolver(attempt, prevIdx int) int {
 	if c.health != nil {
 		return c.health.pick()
 	}
-	// default: rotate per attempt so retries hit a different server.
+	// default: a random server, and a retry always moves to a different one so
+	// a dead resolver cannot eat every attempt of a name.
 	// math/rand/v2 top-level funcs are safe for concurrent use and use a
 	// per-P source, so there is no shared-lock contention here.
-	return (rand.IntN(len(c.resolvers)) + attempt) % len(c.resolvers)
+	n := len(c.resolvers)
+	if attempt > 0 && prevIdx >= 0 && n > 1 {
+		return (prevIdx + 1 + rand.IntN(n-1)) % n
+	}
+	return rand.IntN(n)
 }
 
 // queryBufPool recycles the small byte buffers used to encode outgoing queries
@@ -1394,7 +1406,9 @@ func (c *Client) tcpFollowup(q *query, from string) {
 		c.fail(q.name, fmt.Errorf("tcp fallback failed: %w", err))
 		return
 	}
-	c.finalize(q, c.buildResult(q, resp, from), from)
+	res := c.buildResult(q, resp, from)
+	res.TCP = true
+	c.finalize(q, res, from)
 }
 
 // crossVerify re-resolves a positive answer on a different resolver and only
@@ -1444,11 +1458,12 @@ func (c *Client) otherResolver(idx int) int {
 
 // retry retransmits a query. Every retransmit (timeout or bad-rcode) is counted
 // as a loss signal for the adaptive controller. The resolver is rotated unless
-// sticky mode is set.
+// sticky mode is set, and the socket is picked again so a socket that loses its
+// replies cannot fail every attempt of a name.
 func (c *Client) retry(q *query) {
 	c.statRetransmit.Add(1)
 	attempt := q.attempts + 1
-	c.send(q.sock, q.name, attempt, q.resolverIdx, q.extra)
+	c.send(nil, q.name, attempt, q.resolverIdx, q.extra)
 }
 
 // timeoutLoop scans in-flight tables and retransmits or abandons expired queries.

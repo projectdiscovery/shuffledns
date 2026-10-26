@@ -10,7 +10,7 @@
 //
 //	S - simple text  (default; "name. TYPE data" per record, the form shuffledns parses)
 //	F - full text    (dig-like packet dump with ;; Server/Size/Unix time header)
-//	L - domain list  (tab-separated query/type/data, one record per line)
+//	L - domain list  (question name of each NOERROR reply with answers)
 //	J - ndjson       (one JSON object per reply)
 //	B - binary       (massdns binary packet stream; readable by dnsparse.py)
 package output
@@ -58,6 +58,7 @@ type Format struct {
 
 	listIncludeEmpty bool // 0 (list mode): include NOERROR replies without answers
 	ndjsonFailures   bool // e (ndjson mode): emit a record for terminal failures
+	ndjsonAnswered   bool // a (ndjson mode): only replies with answers or a referral
 }
 
 // ParseFormat parses a massdns-style format string (e.g. "Snl", "F", "J").
@@ -101,6 +102,8 @@ func ParseFormat(spec string) (*Format, error) {
 			f.listIncludeEmpty = true
 		case 'e':
 			f.ndjsonFailures = true
+		case 'a':
+			f.ndjsonAnswered = true
 		case ' ', '\t':
 			// ignore separators
 		default:
@@ -108,10 +111,14 @@ func ParseFormat(spec string) (*Format, error) {
 		}
 	}
 	_ = modeSet
-	// Simple mode with no explicit section defaults to the answer section, which
-	// matches plain `-o S`.
+	// Simple mode with no explicit section defaults to the answer section. Like
+	// massdns, a bare `-o S` also keeps only records owned by the question name;
+	// any modifier letter drops that default.
 	if f.mode == modeSimple && !f.answer && !f.authority && !f.additional {
 		f.answer = true
+	}
+	if spec == "S" {
+		f.matchQ = true
 	}
 	return f, nil
 }
@@ -412,28 +419,18 @@ func (w *Writer) writeFull(r resolve.Result) error {
 
 // ---- list ----
 
+// writeList prints the question name, without the trailing dot, for a NOERROR
+// reply with answers (or without answers when the 0 flag is set), as massdns -o L
+// does.
 func (w *Writer) writeList(r resolve.Result) error {
-	if r.Msg == nil {
+	if r.Msg == nil || r.Rcode != dns.RcodeSuccess {
 		return nil
 	}
-	qname := questionName(r)
-	answers := w.answerRecords(r)
-	if len(answers) == 0 {
-		if w.f.listIncludeEmpty && r.Rcode == dns.RcodeSuccess {
-			if _, err := fmt.Fprintf(w.bw, "%s\n", strings.TrimSuffix(qname, ".")); err != nil {
-				return err
-			}
-		}
+	if len(w.answerRecords(r)) == 0 && !w.f.listIncludeEmpty {
 		return nil
 	}
-	for _, rr := range answers {
-		h := rr.Header()
-		if _, err := fmt.Fprintf(w.bw, "%s\t%s\t%s\n",
-			strings.TrimSuffix(h.Name, "."), typeString(h.Rrtype), rdata(rr)); err != nil {
-			return err
-		}
-	}
-	return nil
+	_, err := fmt.Fprintf(w.bw, "%s\n", strings.TrimSuffix(questionName(r), "."))
+	return err
 }
 
 // ---- ndjson ----
@@ -447,7 +444,7 @@ type jsonRecord struct {
 }
 
 type jsonData struct {
-	Answers     []jsonRecord `json:"answers"`
+	Answers     []jsonRecord `json:"answers,omitempty"`
 	Authorities []jsonRecord `json:"authorities,omitempty"`
 	Additionals []jsonRecord `json:"additionals,omitempty"`
 }
@@ -457,14 +454,18 @@ type jsonReply struct {
 	Type     string   `json:"type"`
 	Class    string   `json:"class"`
 	Status   string   `json:"status"`
-	RxTs     int64    `json:"rx_ts,omitempty"`
+	RxTs     int64    `json:"rx_ts,omitempty"` // unix nanoseconds, like massdns
 	Resolver string   `json:"resolver,omitempty"`
 	Flags    []string `json:"flags,omitempty"`
 	Data     jsonData `json:"data"`
+	Proto    string   `json:"proto,omitempty"`
 	Error    string   `json:"error,omitempty"`
 }
 
 func (w *Writer) writeNDJSON(r resolve.Result) error {
+	if w.f.ndjsonAnswered && !answeredOrReferral(r) {
+		return nil
+	}
 	rec := jsonReply{
 		Name:     questionName(r),
 		Type:     typeString(r.Type),
@@ -473,18 +474,37 @@ func (w *Writer) writeNDJSON(r resolve.Result) error {
 		Resolver: r.Resolver,
 	}
 	if !r.Timestamp.IsZero() {
-		rec.RxTs = r.Timestamp.Unix()
+		rec.RxTs = r.Timestamp.UnixNano()
 	}
 	if r.Msg != nil {
+		rec.Proto = "UDP"
+		if r.TCP {
+			rec.Proto = "TCP"
+		}
 		rec.Flags = msgFlags(r.Msg)
 		rec.Data.Answers = jsonRecords(w.answerRecords(r))
 		rec.Data.Authorities = jsonRecords(r.Msg.Ns)
 		rec.Data.Additionals = jsonRecords(filterOPT(r.Msg.Extra))
 	}
-	if rec.Data.Answers == nil {
-		rec.Data.Answers = []jsonRecord{}
-	}
 	return w.encodeJSON(rec)
+}
+
+// answeredOrReferral reports whether a reply has answers or delegates the
+// question name with an NS record in the authority section (massdns -o Ja).
+func answeredOrReferral(r resolve.Result) bool {
+	if r.Msg == nil {
+		return false
+	}
+	if len(r.Msg.Answer) > 0 {
+		return true
+	}
+	qname := questionName(r)
+	for _, rr := range r.Msg.Ns {
+		if ns, ok := rr.(*dns.NS); ok && strings.EqualFold(ns.Hdr.Name, qname) {
+			return true
+		}
+	}
+	return false
 }
 
 func (w *Writer) encodeJSON(rec jsonReply) error {
@@ -542,11 +562,9 @@ func filterOPT(rrs []dns.RR) []dns.RR {
 	return out
 }
 
+// msgFlags lists the header flags the way massdns ndjson does, without qr.
 func msgFlags(m *dns.Msg) []string {
 	var f []string
-	if m.Response {
-		f = append(f, "qr")
-	}
 	if m.Authoritative {
 		f = append(f, "aa")
 	}
