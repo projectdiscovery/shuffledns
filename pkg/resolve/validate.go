@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/projectdiscovery/shuffledns/pkg/dnsaddr"
 )
 
 // ValidateConfig configures resolver-list curation. It is the native, embeddable
@@ -78,7 +79,7 @@ func ValidateResolvers(ctx context.Context, cfg ValidateConfig) (good []string, 
 		go func(i int, r string) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			chk := checkResolver(ctx, normalizeResolver(r), goodDomains, cfg.Timeout, cfg.MaxRTT)
+			chk := checkResolver(ctx, dnsaddr.WithPort(r), goodDomains, cfg.Timeout, cfg.MaxRTT)
 			report[i] = chk
 			if cfg.OnResolver != nil {
 				cfg.OnResolver(chk)
