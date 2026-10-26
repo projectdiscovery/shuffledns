@@ -369,3 +369,26 @@ func TestResolveManyNames(t *testing.T) {
 	defer mu.Unlock()
 	require.Equal(t, total, len(seen), "all names should resolve")
 }
+
+// TestSingleFamilySockets checks that a single-family resolver set binds
+// single-family sockets even when batching is off. On macOS a dual-stack socket
+// can share its port with another process's IPv4 socket, which then receives
+// the replies, so every query on that socket times out.
+func TestSingleFamilySockets(t *testing.T) {
+	for _, batch := range []BatchMode{BatchDisabled, BatchAdaptive} {
+		c, err := New(Options{Resolvers: []string{"127.0.0.1:53"}, Batch: batch})
+		require.NoError(t, err)
+		for _, s := range c.sockets {
+			local := s.conn.LocalAddr().(*net.UDPAddr)
+			require.NotNil(t, local.IP.To4(), "IPv4 resolvers must use udp4 sockets, got %s", local)
+			require.Equal(t, 4, s.family)
+		}
+		c.Close()
+	}
+
+	// extended input may name IPv6 resolvers, so it keeps dual-stack sockets
+	c, err := New(Options{Resolvers: []string{"127.0.0.1:53"}, Batch: BatchDisabled, ExtendedInput: true})
+	require.NoError(t, err)
+	require.Equal(t, 0, c.sockets[0].family)
+	c.Close()
+}

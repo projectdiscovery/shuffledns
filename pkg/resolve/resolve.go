@@ -526,13 +526,19 @@ func New(opts Options) (*Client, error) {
 		return c, nil
 	}
 
+	// A single-family resolver set gets single-family sockets. On macOS/BSD a
+	// dual-stack [::] socket can be given a port that another process holds
+	// with an IPv4 socket, and that socket then receives every IPv4 reply.
+	// Extended input may name resolvers of the other family, so it keeps
+	// dual-stack sockets unless batching already requires one family.
 	network := "udp"
 	family := 0
+	singleFamily := c.batchCapable || !c.extInput
 	switch {
-	case c.batchCapable && allIPv4:
+	case singleFamily && allIPv4:
 		network = "udp4"
 		family = 4
-	case c.batchCapable && allIPv6:
+	case singleFamily && allIPv6:
 		network = "udp6"
 		family = 6
 	}
@@ -1444,11 +1450,12 @@ func (c *Client) otherResolver(idx int) int {
 
 // retry retransmits a query. Every retransmit (timeout or bad-rcode) is counted
 // as a loss signal for the adaptive controller. The resolver is rotated unless
-// sticky mode is set.
+// sticky mode is set, and the socket is picked again so a socket that loses its
+// replies cannot fail every attempt of a name.
 func (c *Client) retry(q *query) {
 	c.statRetransmit.Add(1)
 	attempt := q.attempts + 1
-	c.send(q.sock, q.name, attempt, q.resolverIdx, q.extra)
+	c.send(nil, q.name, attempt, q.resolverIdx, q.extra)
 }
 
 // timeoutLoop scans in-flight tables and retransmits or abandons expired queries.
