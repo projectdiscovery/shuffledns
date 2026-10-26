@@ -46,6 +46,7 @@ type Result struct {
 	TXT      []string // TXT strings
 	SOA      []string // SOA primary nameservers
 	Resolver string   // resolver that answered
+	TCP      bool     // answer came over TCP (truncation fallback)
 
 	// Msg is the full parsed response message (all sections, TTLs, classes).
 	// It is retained so callers (e.g. the output formatter) can render the
@@ -1400,7 +1401,9 @@ func (c *Client) tcpFollowup(q *query, from string) {
 		c.fail(q.name, fmt.Errorf("tcp fallback failed: %w", err))
 		return
 	}
-	c.finalize(q, c.buildResult(q, resp, from), from)
+	res := c.buildResult(q, resp, from)
+	res.TCP = true
+	c.finalize(q, res, from)
 }
 
 // crossVerify re-resolves a positive answer on a different resolver and only

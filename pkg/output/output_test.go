@@ -134,11 +134,70 @@ func TestFull(t *testing.T) {
 	}
 }
 
+// chainResult is a reply whose answer follows a CNAME to another owner.
+func chainResult() resolve.Result {
+	m := new(dns.Msg)
+	m.SetQuestion("www.example.com.", dns.TypeA)
+	m.Response = true
+	cname, _ := dns.NewRR("www.example.com. 60 IN CNAME example.com.")
+	a, _ := dns.NewRR("example.com. 60 IN A 93.184.216.34")
+	m.Answer = []dns.RR{cname, a}
+	return resolve.Result{Name: "www.example.com", Type: dns.TypeA, Rcode: dns.RcodeSuccess, Msg: m}
+}
+
+// TestSimpleBareMatchesQuestion follows massdns: a bare -o S keeps only records
+// owned by the question name, while any modifier drops that default.
+func TestSimpleBareMatchesQuestion(t *testing.T) {
+	if got, want := render(t, "S", chainResult()), "www.example.com. CNAME example.com.\n"; got != want {
+		t.Fatalf("S: got %q want %q", got, want)
+	}
+	if got, want := render(t, "Sn", chainResult()), "www.example.com. CNAME example.com.\nexample.com. A 93.184.216.34\n"; got != want {
+		t.Fatalf("Sn: got %q want %q", got, want)
+	}
+}
+
+// TestList follows massdns -o L: one question name per NOERROR reply with answers.
 func TestList(t *testing.T) {
-	got := render(t, "L", sampleResult())
-	want := "example.com\tA\t93.184.216.34\n"
-	if got != want {
+	if got, want := render(t, "L", sampleResult()), "example.com\n"; got != want {
 		t.Fatalf("got %q want %q", got, want)
+	}
+	if got, want := render(t, "L", chainResult()), "www.example.com\n"; got != want {
+		t.Fatalf("chain: got %q want %q", got, want)
+	}
+
+	empty := sampleResult()
+	empty.Msg.Answer = nil
+	if got := render(t, "L", empty); got != "" {
+		t.Fatalf("L must skip replies without answers: %q", got)
+	}
+	if got, want := render(t, "L0", empty), "example.com\n"; got != want {
+		t.Fatalf("L0: got %q want %q", got, want)
+	}
+
+	nx := sampleResult()
+	nx.Rcode = dns.RcodeNameError
+	nx.Msg.Rcode = dns.RcodeNameError
+	if got := render(t, "L0", nx); got != "" {
+		t.Fatalf("L0 must skip non-NOERROR replies: %q", got)
+	}
+}
+
+// TestNDJSONAnsweredOnly follows massdns -o Ja: replies without answers are
+// written only when they delegate the question name.
+func TestNDJSONAnsweredOnly(t *testing.T) {
+	if got := render(t, "Ja", sampleResult()); got == "" {
+		t.Fatal("Ja must write a reply with answers")
+	}
+	empty := sampleResult()
+	empty.Msg.Answer = nil
+	empty.Msg.Ns = nil
+	if got := render(t, "Ja", empty); got != "" {
+		t.Fatalf("Ja must skip a reply without answers or referral: %q", got)
+	}
+	ns, _ := dns.NewRR("example.com. 60 IN NS a.iana-servers.net.")
+	empty.Msg.Ns = []dns.RR{ns}
+	if got := render(t, "Ja", empty); got == "" {
+		t.Fatal("Ja must write a referral for the question name")
 	}
 }
 
@@ -160,6 +219,7 @@ func TestNDJSON(t *testing.T) {
 			} `json:"answers"`
 		} `json:"data"`
 		Flags []string `json:"flags"`
+		Proto string   `json:"proto"`
 	}
 	if err := json.Unmarshal([]byte(strings.TrimSpace(got)), &rec); err != nil {
 		t.Fatalf("invalid ndjson %q: %v", got, err)
@@ -167,8 +227,12 @@ func TestNDJSON(t *testing.T) {
 	if rec.Name != "example.com." || rec.Type != "A" || rec.Status != "NOERROR" {
 		t.Fatalf("bad header fields: %+v", rec)
 	}
-	if rec.Resolver != "192.0.2.1:53" || rec.RxTs != 1513458347 {
+	// massdns writes rx_ts in nanoseconds, adds proto and leaves qr out of flags
+	if rec.Resolver != "192.0.2.1:53" || rec.RxTs != 1513458347000000000 || rec.Proto != "UDP" {
 		t.Fatalf("bad meta: %+v", rec)
+	}
+	if strings.Join(rec.Flags, ",") != "rd,ra" {
+		t.Fatalf("bad flags: %v", rec.Flags)
 	}
 	if len(rec.Data.Answers) != 1 || rec.Data.Answers[0].Data != "93.184.216.34" || rec.Data.Answers[0].TTL != 45929 {
 		t.Fatalf("bad answers: %+v", rec.Data.Answers)
@@ -241,11 +305,11 @@ func TestOnlyQueryType(t *testing.T) {
 	m.Answer = []dns.RR{cname, a}
 	r := resolve.Result{Name: "www.example.com", Type: dns.TypeA, Rcode: dns.RcodeSuccess, Msg: m}
 
-	full := renderCfg(t, Config{Format: "S"}, r)
+	full := renderCfg(t, Config{Format: "Sn"}, r)
 	if !strings.Contains(full, "CNAME") {
 		t.Fatalf("expected CNAME in unfiltered output: %q", full)
 	}
-	only := renderCfg(t, Config{Format: "S", OnlyQueryType: true}, r)
+	only := renderCfg(t, Config{Format: "Sn", OnlyQueryType: true}, r)
 	if strings.Contains(only, "CNAME") {
 		t.Fatalf("only-type output should drop CNAME: %q", only)
 	}
