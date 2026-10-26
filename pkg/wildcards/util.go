@@ -2,9 +2,10 @@ package wildcards
 
 import (
 	"bufio"
-	"net"
 	"os"
 	"strings"
+
+	"github.com/projectdiscovery/shuffledns/pkg/dnsaddr"
 )
 
 func LoadResolversFromFile(file string) ([]string, error) {
@@ -24,11 +25,7 @@ func LoadResolversFromFile(file string) ([]string, error) {
 			continue
 		}
 		// keep an explicit port, default to 53 otherwise (IPv6 safe)
-		if _, _, err := net.SplitHostPort(text); err == nil {
-			servers = append(servers, text)
-			continue
-		}
-		servers = append(servers, net.JoinHostPort(strings.Trim(text, "[]"), "53"))
+		servers = append(servers, dnsaddr.WithPort(text))
 	}
 	return servers, nil
 }

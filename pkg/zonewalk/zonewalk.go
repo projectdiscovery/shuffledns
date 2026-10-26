@@ -12,11 +12,11 @@ package zonewalk
 import (
 	"context"
 	"fmt"
-	"net"
 	"strings"
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/projectdiscovery/shuffledns/pkg/dnsaddr"
 )
 
 // Config controls a zone walk.
@@ -66,7 +66,7 @@ func Walk(ctx context.Context, cfg Config) (*Result, error) {
 	if cfg.MaxNames <= 0 {
 		cfg.MaxNames = 1_000_000
 	}
-	server := normalize(cfg.Resolvers[0])
+	server := dnsaddr.WithPort(cfg.Resolvers[0])
 	apex := dns.Fqdn(strings.ToLower(cfg.Zone))
 	client := &dns.Client{Timeout: cfg.Timeout}
 
@@ -160,12 +160,4 @@ func nsec3Param(resp *dns.Msg) (*NSEC3Info, bool) {
 
 func equalName(a, b string) bool {
 	return strings.EqualFold(dns.Fqdn(a), dns.Fqdn(b))
-}
-
-func normalize(r string) string {
-	r = strings.TrimSpace(r)
-	if _, _, err := net.SplitHostPort(r); err != nil {
-		return net.JoinHostPort(r, "53")
-	}
-	return r
 }

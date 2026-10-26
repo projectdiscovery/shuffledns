@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/projectdiscovery/shuffledns/pkg/dnsaddr"
 )
 
 // maxNSEC3Iterations caps the SHA-1 iteration count we are willing to process.
@@ -65,7 +66,7 @@ func CrackNSEC3(ctx context.Context, cfg CrackConfig) (*CrackResult, error) {
 	if cfg.MaxQueries <= 0 {
 		cfg.MaxQueries = 2000
 	}
-	server := normalize(cfg.Resolvers[0])
+	server := dnsaddr.WithPort(cfg.Resolvers[0])
 	apex := dns.Fqdn(strings.ToLower(cfg.Zone))
 	client := &dns.Client{Timeout: cfg.Timeout}
 

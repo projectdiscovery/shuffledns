@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/projectdiscovery/shuffledns/pkg/dnsaddr"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
 )
@@ -397,7 +398,7 @@ func New(opts Options) (*Client, error) {
 		if r == "" {
 			continue
 		}
-		normalized := normalizeResolver(r)
+		normalized := dnsaddr.WithPort(r)
 		// pre-resolve once at startup so the hot send() path never parses an
 		// address string or allocates a *net.UDPAddr per query/retransmit.
 		addr, err := net.ResolveUDPAddr("udp", normalized)
@@ -825,7 +826,7 @@ func (c *Client) cachedAddr(spec string) *net.UDPAddr {
 	if v, ok := c.addrCache.Load(spec); ok {
 		return v.(*net.UDPAddr)
 	}
-	addr, err := net.ResolveUDPAddr("udp", normalizeResolver(spec))
+	addr, err := net.ResolveUDPAddr("udp", dnsaddr.WithPort(spec))
 	if err != nil {
 		c.addrCache.Store(spec, (*net.UDPAddr)(nil))
 		return nil
@@ -1724,12 +1725,4 @@ func sameStringSet(a, b []string) bool {
 		}
 	}
 	return true
-}
-
-func normalizeResolver(r string) string {
-	r = strings.TrimSpace(r)
-	if _, _, err := net.SplitHostPort(r); err != nil {
-		return net.JoinHostPort(r, "53")
-	}
-	return r
 }

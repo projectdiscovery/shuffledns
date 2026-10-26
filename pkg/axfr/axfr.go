@@ -13,11 +13,11 @@ package axfr
 import (
 	"context"
 	"fmt"
-	"net"
 	"strings"
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/projectdiscovery/shuffledns/pkg/dnsaddr"
 )
 
 // Config controls a zone-transfer attempt.
@@ -78,7 +78,7 @@ func Attempt(ctx context.Context, cfg Config) (*Result, error) {
 
 	var lastErr error
 	for _, ns := range servers {
-		res, err := transferFrom(ctx, apex, withPort(ns), cfg)
+		res, err := transferFrom(ctx, apex, dnsaddr.WithPort(ns), cfg)
 		if cfg.OnNameserver != nil {
 			n := 0
 			if res != nil {
@@ -181,7 +181,7 @@ func discoverNameservers(ctx context.Context, apex string, resolvers []string, t
 	if len(resolvers) == 0 {
 		return nil, fmt.Errorf("resolvers are required to discover nameservers (or pass Nameservers)")
 	}
-	server := withPort(resolvers[0])
+	server := dnsaddr.WithPort(resolvers[0])
 	client := &dns.Client{Timeout: timeout}
 
 	m := new(dns.Msg)
@@ -235,12 +235,4 @@ func discoverNameservers(ctx context.Context, apex string, resolvers []string, t
 func inZone(name, apex string) bool {
 	name, apex = dns.Fqdn(strings.ToLower(name)), dns.Fqdn(strings.ToLower(apex))
 	return name == apex || strings.HasSuffix(name, "."+apex)
-}
-
-func withPort(s string) string {
-	s = strings.TrimSpace(s)
-	if _, _, err := net.SplitHostPort(s); err != nil {
-		return net.JoinHostPort(s, "53")
-	}
-	return s
 }
