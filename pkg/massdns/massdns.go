@@ -60,6 +60,9 @@ type Options struct {
 	// Iterative resolves from the root servers directly (no recursive resolver
 	// list needed), caching delegations. Removes the public-resolver dependency.
 	Iterative bool
+	// iterativeRoots overrides the root hints of the iterative resolver
+	// (tests only).
+	iterativeRoots []string
 
 	// Distributed resolution and resume.
 	Shard      string // "m/n": process only shard m of n

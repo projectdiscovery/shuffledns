@@ -93,3 +93,61 @@ func TestResolveNamesRecordsResolver(t *testing.T) {
 		shstore.Close()
 	}
 }
+
+// TestResolveNamesIterativeOmitsResolvers checks that iterative mode records
+// no resolver: the server that answers there is an authoritative nameserver,
+// not one from the user's resolver list, so the JSON output must carry no
+// "resolvers" field.
+func TestResolveNamesIterativeOmitsResolvers(t *testing.T) {
+	// A single local server acts as the root and answers every name directly.
+	root, err := simdns.Start(1, simdns.Config{BaseLatency: 200 * time.Microsecond, HitPercent: 100})
+	require.Nil(t, err)
+	defer root.Stop()
+
+	outputFile := filepath.Join(t.TempDir(), "out.json")
+	instance := &Instance{options: Options{
+		Iterative:        true,
+		iterativeRoots:   root.Addrs,
+		Threads:          16,
+		WildcardsThreads: 4,
+		Json:             true,
+		OutputFile:       outputFile,
+	}}
+
+	shstore, err := store.New("")
+	require.Nil(t, err)
+	defer shstore.Close()
+
+	names := make([]string, 10)
+	for i := range names {
+		names[i] = fmt.Sprintf("host%d.example.com", i)
+	}
+	err = instance.resolveNames(context.Background(), shstore, func(out chan<- string) error {
+		for _, name := range names {
+			out <- name
+		}
+		return nil
+	})
+	require.Nil(t, err)
+
+	stored := 0
+	shstore.Iterate(func(ip string, hostnames []string, counter int) {
+		for _, hostname := range hostnames {
+			stored++
+			require.Nil(t, shstore.GetResolvers(hostname), hostname)
+		}
+	})
+	require.NotZero(t, stored, "the iterative engine must have resolved some names")
+
+	require.Nil(t, instance.writeOutput(shstore))
+	data, err := os.ReadFile(outputFile)
+	require.Nil(t, err)
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	require.NotEmpty(t, lines)
+	for _, line := range lines {
+		var record map[string]any
+		require.Nil(t, json.Unmarshal([]byte(line), &record), line)
+		require.NotContains(t, record, "resolvers", line)
+		require.Equal(t, fmt.Sprintf(`{"hostname":%q}`, record["hostname"]), line)
+	}
+}

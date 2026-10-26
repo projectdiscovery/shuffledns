@@ -242,6 +242,7 @@ func (instance *Instance) runEngine(ctx context.Context, resolvers []string, qty
 			QueryType:   qtype,
 			Concurrency: workers,
 			IPv6:        qtype == dns.TypeAAAA,
+			RootServers: instance.options.iterativeRoots,
 		})
 		if err != nil {
 			return fmt.Errorf("could not create iterative resolver: %w", err)
@@ -250,7 +251,10 @@ func (instance *Instance) runEngine(ctx context.Context, resolvers []string, qty
 		return ir.ResolveStream(ctx, input, iterative.StreamConfig{
 			QueryType: qtype,
 			OnResult: func(r *resolve.Result) {
-				storeResult(r.Name, r.Rcode, r.A, r.AAAA, r.Resolver)
+				// r.Resolver is the authoritative nameserver that gave the
+				// final answer, not a resolver from the user's list, so it is
+				// not recorded and the "resolvers" output field is left out.
+				storeResult(r.Name, r.Rcode, r.A, r.AAAA, "")
 			},
 			OnError: func(name string, _ error) {
 				markDone(name)
