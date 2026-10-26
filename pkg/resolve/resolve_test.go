@@ -392,3 +392,15 @@ func TestSingleFamilySockets(t *testing.T) {
 	require.Equal(t, 0, c.sockets[0].family)
 	c.Close()
 }
+
+// TestRetryRotatesResolver checks that a retry never goes back to the resolver
+// of the previous attempt, so one dead resolver costs at most one timeout.
+func TestRetryRotatesResolver(t *testing.T) {
+	c, err := New(Options{Resolvers: []string{"127.0.0.1:53", "127.0.0.2:53", "127.0.0.3:53"}})
+	require.NoError(t, err)
+	defer c.Close()
+	for i := 0; i < 1000; i++ {
+		prev := i % 3
+		require.NotEqual(t, prev, c.pickResolver(1+i%4, prev))
+	}
+}

@@ -756,10 +756,15 @@ func (c *Client) pickResolver(attempt, prevIdx int) int {
 	if c.health != nil {
 		return c.health.pick()
 	}
-	// default: rotate per attempt so retries hit a different server.
+	// default: a random server, and a retry always moves to a different one so
+	// a dead resolver cannot eat every attempt of a name.
 	// math/rand/v2 top-level funcs are safe for concurrent use and use a
 	// per-P source, so there is no shared-lock contention here.
-	return (rand.IntN(len(c.resolvers)) + attempt) % len(c.resolvers)
+	n := len(c.resolvers)
+	if attempt > 0 && prevIdx >= 0 && n > 1 {
+		return (prevIdx + 1 + rand.IntN(n-1)) % n
+	}
+	return rand.IntN(n)
 }
 
 // queryBufPool recycles the small byte buffers used to encode outgoing queries
