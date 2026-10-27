@@ -1,129 +1,135 @@
+// Package store provides an in-memory ip -> hostnames index used for
+// deduplication and wildcard removal.
+//
+// It previously persisted to LevelDB on disk (with a JSON marshal and
+// read-modify-write on every append plus background compaction). The native
+// resolver streams structured results in-process, so an in-memory map is both
+// simpler and considerably faster; the public API is kept stable.
 package store
 
 import (
-	"encoding/json"
-	"os"
-	"strings"
-
-	mapsutil "github.com/projectdiscovery/utils/maps"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/opt"
+	"sort"
+	"sync"
 )
 
-const Megabyte = 1 << 20
-
-// Store is a storage for ip based wildcard removal
+// Store is an in-memory storage for ip based deduplication and wildcard removal.
 type Store struct {
-	DB *leveldb.DB
+	mu   sync.RWMutex
+	data map[string]map[string]struct{}
 }
 
-// New creates a new storage for ip based wildcard removal
-func New(dbPath string) (*Store, error) {
-	storeDb, err := os.MkdirTemp(dbPath, "shuffledns-db-")
-	if err != nil {
-		return nil, err
-	}
-	db, err := leveldb.OpenFile(storeDb, &opt.Options{
-		// Optimize for disk space reduction
-		CompactionTableSize:    64 * Megabyte, // Reduced from 256MB for more frequent compaction
-		WriteBuffer:            2 * Megabyte,  // Reduced from 4MB for more frequent flushing
-		WriteL0SlowdownTrigger: 4,             // Trigger slowdown earlier
-		WriteL0PauseTrigger:    8,             // Trigger pause earlier
-		BlockSize:              2 * 1024,      // Reduced from 4KB for better compression of small records
-		BlockCacheCapacity:     4 * Megabyte,  // Reduced from 8MB to lower memory usage
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &Store{DB: db}, nil
+// New creates a new in-memory store. The path argument is accepted for API
+// compatibility and ignored.
+func New(_ string) (*Store, error) {
+	return &Store{data: make(map[string]map[string]struct{})}, nil
 }
 
-// New creates a new ip-hostname pair in the map
+// New creates a new ip-hostname pair in the map.
 func (s *Store) New(ip, hostname string) error {
-	hostnameMap := map[string]struct{}{hostname: {}}
-	jsonData, err := json.Marshal(hostnameMap)
-	if err != nil {
-		return err
-	}
-	return s.DB.Put([]byte(ip), jsonData, nil)
+	return s.Append(ip, hostname)
 }
 
-// Exists indicates if an IP exists in the map
+// Exists indicates if an IP exists in the map.
 func (s *Store) Exists(ip string) bool {
-	ok, err := s.DB.Has([]byte(ip), nil)
-	return err == nil && ok
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, ok := s.data[ip]
+	return ok
 }
 
-// Get gets the meta-information for an IP address from the map.
+// GetHostnames returns the comma separated hostnames stored for an IP.
 func (s *Store) GetHostnames(ip string) string {
-	data, err := s.DB.Get([]byte(ip), nil)
-	if err != nil {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	hostnameMap, ok := s.data[ip]
+	if !ok {
 		return ""
 	}
-
-	var hostnameMap map[string]struct{}
-	if err := json.Unmarshal(data, &hostnameMap); err != nil {
-		return ""
+	hostnames := make([]string, 0, len(hostnameMap))
+	for hostname := range hostnameMap {
+		hostnames = append(hostnames, hostname)
 	}
-
-	return strings.Join(mapsutil.GetKeys(hostnameMap), ",")
+	sort.Strings(hostnames)
+	return joinComma(hostnames)
 }
 
+// Append adds one or more hostnames to an IP, deduplicating automatically.
 func (s *Store) Append(ip string, hostnames ...string) error {
-	// Get existing hostnames
-	var hostnameMap map[string]struct{}
-	existingData, err := s.DB.Get([]byte(ip), nil)
-	if err == nil && len(existingData) > 0 {
-		if err := json.Unmarshal(existingData, &hostnameMap); err != nil {
-			// If unmarshaling fails, start with empty map
-			hostnameMap = make(map[string]struct{})
-		}
-	} else {
-		hostnameMap = make(map[string]struct{})
-	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	// Add new hostnames to map (automatic deduplication)
+	hostnameMap, ok := s.data[ip]
+	if !ok {
+		hostnameMap = make(map[string]struct{}, len(hostnames))
+		s.data[ip] = hostnameMap
+	}
 	for _, hostname := range hostnames {
 		hostnameMap[hostname] = struct{}{}
 	}
-
-	// Marshal and store
-	jsonData, err := json.Marshal(hostnameMap)
-	if err != nil {
-		return err
-	}
-
-	return s.DB.Put([]byte(ip), jsonData, nil)
+	return nil
 }
 
-// Delete deletes the records for an IP from store.
+// Delete removes the records for an IP from the store.
 func (s *Store) Delete(ip string) error {
-	return s.DB.Delete([]byte(ip), nil)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.data, ip)
+	return nil
 }
 
+// Close releases all resources held by the store.
 func (s *Store) Close() {
-	_ = s.DB.Close()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.data = nil
 }
 
+// Iterate walks every ip and its hostnames. counter is the number of distinct
+// hostnames pointing at the ip (used by the wildcard heuristic).
 func (s *Store) Iterate(f func(ip string, hostnames []string, counter int)) {
-	iter := s.DB.NewIterator(nil, nil)
-	defer iter.Release()
-
-	for iter.Next() {
-		ip := string(iter.Key())
-
-		var hostnameMap map[string]struct{}
-		if err := json.Unmarshal(iter.Value(), &hostnameMap); err != nil {
-			continue
-		}
-
-		// Convert map keys to slice
+	// snapshot under lock to avoid holding it during the callback (which may
+	// perform network I/O during wildcard filtering)
+	s.mu.RLock()
+	ips := make([]string, 0, len(s.data))
+	snapshot := make(map[string][]string, len(s.data))
+	for ip, hostnameMap := range s.data {
 		hostnames := make([]string, 0, len(hostnameMap))
 		for hostname := range hostnameMap {
 			hostnames = append(hostnames, hostname)
 		}
-
-		counter := len(hostnames)
-		f(ip, hostnames, counter)
+		sort.Strings(hostnames)
+		snapshot[ip] = hostnames
+		ips = append(ips, ip)
 	}
+	s.mu.RUnlock()
+
+	// Iterate in sorted order so output is deterministic across runs (the map
+	// backing replaced a LevelDB store that iterated in sorted key order).
+	sort.Strings(ips)
+	for _, ip := range ips {
+		hostnames := snapshot[ip]
+		f(ip, hostnames, len(hostnames))
+	}
+}
+
+func joinComma(values []string) string {
+	switch len(values) {
+	case 0:
+		return ""
+	case 1:
+		return values[0]
+	}
+	n := len(values) - 1
+	for _, v := range values {
+		n += len(v)
+	}
+	out := make([]byte, 0, n)
+	for i, v := range values {
+		if i > 0 {
+			out = append(out, ',')
+		}
+		out = append(out, v...)
+	}
+	return string(out)
 }

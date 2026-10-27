@@ -14,6 +14,9 @@ func main() {
 		gologger.Fatal().Msgf("Could not create runner: %s\n", err)
 	}
 
-	massdnsRunner.RunEnumeration()
+	if err := massdnsRunner.RunEnumeration(); err != nil {
+		massdnsRunner.Close()
+		gologger.Fatal().Msgf("Could not run enumeration: %s\n", err)
+	}
 	massdnsRunner.Close()
 }
