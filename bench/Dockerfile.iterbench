@@ -1,0 +1,25 @@
+# Offline iterative-vs-stub accuracy/throughput benchmark. Builds the iterbench
+# harness and runs it entirely on loopback: a real-socket authoritative
+# hierarchy (127.0.0.x) for the iterative engine and a simulated flaky
+# recursive-resolver battery (127.0.0.1) for the stub engine. No DNS traffic
+# leaves the container.
+#
+# Build (context must be the repository root):
+#   docker build -f bench/Dockerfile.iterbench -t shuffledns-iterbench .
+#
+# Run:
+#   docker run --rm shuffledns-iterbench -domains 200 -hosts 250 -hijack 0.15
+#
+# Needs Linux loopback (127.0.0.x); requires no network at runtime.
+
+FROM golang:1.24-bookworm AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /usr/local/bin/iterbench ./cmd/iterbench
+
+FROM debian:bookworm-slim
+COPY --from=build /usr/local/bin/iterbench /usr/local/bin/iterbench
+ENTRYPOINT ["/usr/local/bin/iterbench"]
+CMD ["-domains", "200", "-hosts", "250", "-hijack", "0.15"]
