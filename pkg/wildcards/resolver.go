@@ -199,7 +199,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 		if cachedValueOk {
 			for _, knownIP := range knownIPs {
 				if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
-					return true, cachedValue.IPS.Map
+					return true, cachedValue.IPS.GetAll()
 				}
 			}
 			// Cache hit but IP not found - re-probe to catch missed round-robin IPs
@@ -211,7 +211,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 				_ = w.wildcardAnswersCache.Set(original, cachedValue)
 				for _, knownIP := range knownIPs {
 					if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
-						return true, cachedValue.IPS.Map
+						return true, cachedValue.IPS.GetAll()
 					}
 				}
 			}
@@ -241,7 +241,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 			_ = w.wildcardAnswersCache.Set(original, cachedValue)
 			for _, knownIP := range knownIPs {
 				if _, ipExists := cachedValue.IPS.Get(knownIP); ipExists {
-					return true, cachedValue.IPS.Map
+					return true, cachedValue.IPS.GetAll()
 				}
 			}
 
@@ -252,7 +252,7 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 				if err == nil && in != nil && in.StatusCodeRaw == dns.RcodeSuccess {
 					for _, record := range in.A {
 						if _, ipExists := cachedValue.IPS.Get(record); ipExists {
-							return true, cachedValue.IPS.Map
+							return true, cachedValue.IPS.GetAll()
 						}
 					}
 				}
@@ -273,13 +273,10 @@ func (w *Resolver) LookupHost(host string, knownIPs []string) (bool, map[string]
 func (w *Resolver) GetAllWildcardIPs() map[string]struct{} {
 	ips := make(map[string]struct{})
 
-	_ = w.wildcardAnswersCache.Iterate(func(key string, value wildcardAnswerCacheValue) error {
-		for ip := range value.IPS.Map {
-			if _, ok := ips[ip]; !ok {
-				ips[ip] = struct{}{}
-			}
+	for _, value := range w.wildcardAnswersCache.GetAll() {
+		for ip := range value.IPS.GetAll() {
+			ips[ip] = struct{}{}
 		}
-		return nil
-	})
+	}
 	return ips
 }
