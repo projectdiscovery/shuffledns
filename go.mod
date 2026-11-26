@@ -5,9 +5,9 @@ go 1.26.10
 require (
 	github.com/miekg/dns v1.1.73
 	github.com/projectdiscovery/dnsx v1.3.1
-	github.com/projectdiscovery/goflags v0.2.1
-	github.com/projectdiscovery/gologger v1.1.76
-	github.com/projectdiscovery/retryabledns v1.0.119
+	github.com/projectdiscovery/goflags v0.2.2
+	github.com/projectdiscovery/gologger v1.1.77
+	github.com/projectdiscovery/retryabledns v1.0.120
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/rs/xid v1.5.0
 	github.com/stretchr/testify v1.12.1
@@ -25,7 +25,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/projectdiscovery/utils v0.11.15
+	github.com/projectdiscovery/utils v0.11.16
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
